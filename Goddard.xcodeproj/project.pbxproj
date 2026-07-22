@@ -7,8 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1ACAD00530108848005772FB /* SameEyesOptimizerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1ACAD00430108848005772FB /* SameEyesOptimizerKit */; };
-		1ACAD14A3010958B005772FB /* SameEyesUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1ACAD1493010958B005772FB /* SameEyesUIKit */; };
+		1A789D6B30116786007A33B6 /* SameEyesMetalKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A789D6A30116786007A33B6 /* SameEyesMetalKit */; };
+		1A789D6D30116786007A33B6 /* SameEyesOptimizerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A789D6C30116786007A33B6 /* SameEyesOptimizerKit */; };
+		1A789D6F30116786007A33B6 /* SameEyesUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A789D6E30116786007A33B6 /* SameEyesUIKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -57,8 +58,9 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1ACAD00530108848005772FB /* SameEyesOptimizerKit in Frameworks */,
-				1ACAD14A3010958B005772FB /* SameEyesUIKit in Frameworks */,
+				1A789D6B30116786007A33B6 /* SameEyesMetalKit in Frameworks */,
+				1A789D6D30116786007A33B6 /* SameEyesOptimizerKit in Frameworks */,
+				1A789D6F30116786007A33B6 /* SameEyesUIKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -127,8 +129,9 @@
 			);
 			name = Goddard;
 			packageProductDependencies = (
-				1ACAD00430108848005772FB /* SameEyesOptimizerKit */,
-				1ACAD1493010958B005772FB /* SameEyesUIKit */,
+				1A789D6A30116786007A33B6 /* SameEyesMetalKit */,
+				1A789D6C30116786007A33B6 /* SameEyesOptimizerKit */,
+				1A789D6E30116786007A33B6 /* SameEyesUIKit */,
 			);
 			productName = Goddard;
 			productReference = 1A641B2E301086F500F3E476 /* Goddard.app */;
@@ -213,8 +216,7 @@
 			mainGroup = 1A641B25301086F500F3E476;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				1A641B583010875800F3E476 /* XCLocalSwiftPackageReference "../SameEyesOptimizerKit" */,
-				1ACAD1483010957C005772FB /* XCLocalSwiftPackageReference "../SameEyesUIKit" */,
+				1A789D6930116767007A33B6 /* XCLocalSwiftPackageReference "../SameEyesKit" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1A641B2F301086F500F3E476 /* Products */;
@@ -596,25 +598,26 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		1A641B583010875800F3E476 /* XCLocalSwiftPackageReference "../SameEyesOptimizerKit" */ = {
+		1A789D6930116767007A33B6 /* XCLocalSwiftPackageReference "../SameEyesKit" */ = {
 			isa = XCLocalSwiftPackageReference;
-			relativePath = ../SameEyesOptimizerKit;
-		};
-		1ACAD1483010957C005772FB /* XCLocalSwiftPackageReference "../SameEyesUIKit" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = ../SameEyesUIKit;
+			relativePath = ../SameEyesKit;
 		};
 /* End XCLocalSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		1ACAD00430108848005772FB /* SameEyesOptimizerKit */ = {
+		1A789D6A30116786007A33B6 /* SameEyesMetalKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1A641B583010875800F3E476 /* XCLocalSwiftPackageReference "../SameEyesOptimizerKit" */;
+			package = 1A789D6930116767007A33B6 /* XCLocalSwiftPackageReference "../SameEyesKit" */;
+			productName = SameEyesMetalKit;
+		};
+		1A789D6C30116786007A33B6 /* SameEyesOptimizerKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A789D6930116767007A33B6 /* XCLocalSwiftPackageReference "../SameEyesKit" */;
 			productName = SameEyesOptimizerKit;
 		};
-		1ACAD1493010958B005772FB /* SameEyesUIKit */ = {
+		1A789D6E30116786007A33B6 /* SameEyesUIKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1ACAD1483010957C005772FB /* XCLocalSwiftPackageReference "../SameEyesUIKit" */;
+			package = 1A789D6930116767007A33B6 /* XCLocalSwiftPackageReference "../SameEyesKit" */;
 			productName = SameEyesUIKit;
 		};
 /* End XCSwiftPackageProductDependency section */

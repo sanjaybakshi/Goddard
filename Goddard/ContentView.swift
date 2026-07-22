@@ -13,7 +13,7 @@ struct ContentView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            CanvasView()
+            MetalCanvasView()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Divider()

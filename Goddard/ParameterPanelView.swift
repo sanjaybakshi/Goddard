@@ -65,11 +65,21 @@ struct ParameterPanelView: View {
 
                 SectionBox("Setup", isExpanded: $showSetup) {
                     VStack(alignment: .leading, spacing: 10) {
-                        Stepper("Points: \(fViewModel.fPointCount)",
-                                value: $fViewModel.fPointCount, in: 1...4096, step: 16)
-                        Stepper("Image: \(fViewModel.fImageSize) px",
-                                value: $fViewModel.fImageSize, in: 32...512, step: 32)
-                        Text("Applied on Reset")
+                        Stepper("Points: \(fViewModel.fOptimizerPointCount)",
+                                value: $fViewModel.fOptimizerPointCount, in: 1...4096, step: 16)
+                        Stepper("Optimize @ \(fViewModel.fOptimizerLongSide) px",
+                                value: $fViewModel.fOptimizerLongSide, in: 32...512, step: 32)
+                        FloatSliderRow(title: "Dot radius", store: fViewModel, undoKeyPath: \.fOptimizerDotRadius,
+                                       value: $fViewModel.fOptimizerDotRadius, range: 0.005...0.2,
+                                       fractionDigits: 3, actionName: "Change dot radius")
+
+                        Divider()
+
+                        Stepper("Output W: \(fViewModel.fOutputWidth)",
+                                value: $fViewModel.fOutputWidth, in: 64...4096, step: 32)
+                        Stepper("Output H: \(fViewModel.fOutputHeight)",
+                                value: $fViewModel.fOutputHeight, in: 64...4096, step: 32)
+                        Text("Applied on Reset (output sets the optimize aspect)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

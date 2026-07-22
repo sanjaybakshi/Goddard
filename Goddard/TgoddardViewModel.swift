@@ -26,9 +26,18 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
     @Published var fMaxMotion:     Float = 0.02
     @Published var fOverlapWeight: Float = 0.0
 
-    // Apply-on-rebuild (Reset).
-    @Published var fPointCount: Int = 64
-    @Published var fImageSize:  Int = 128
+    // Optimizer setup — applied on rebuild (Reset). fOptimizerLongSide is the
+    // long side of the aspect-matched grid; OptimizationFrame derives the other
+    // axis from the output aspect.
+    @Published var fOptimizerLongSide:   Int = 128
+    @Published var fOptimizerPointCount: Int = 64
+    /// Initial dot radius as a fraction of the frame's long side.
+    @Published var fOptimizerDotRadius:  Float = 0.06
+
+    // Output frame — user-specified, arbitrary aspect. Sets the optimize aspect
+    // and the artifact resolution. Applied on rebuild (Reset).
+    @Published var fOutputWidth:  Int = 1280
+    @Published var fOutputHeight: Int = 720
 
     // Read by the UI; mutate only via start()/stop()/toggleRun().
     @Published private(set) var fRunning: Bool = false
@@ -37,8 +46,6 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
 
     private var fOptimizer: PointsOptimizer?
     private var fLoopTask: Task<Void, Never>?
-    private var fWidth  = 128
-    private var fHeight = 128
 
     // MARK: - Build / reset
 
@@ -47,10 +54,14 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
     func buildOptimizer() {
         stop()
 
-        let n = max(1, fPointCount)
-        let W = max(8, fImageSize)
-        let H = W
-        fWidth = W; fHeight = H
+        let n = max(1, fOptimizerPointCount)
+
+        // Aspect-matched grid from the long-side dimension + output aspect
+        // (SameEyesOptimizerKit). Non-square; renderPoints handles it directly.
+        let frame = OptimizationFrame(outputWidth: fOutputWidth,
+                                      outputHeight: fOutputHeight,
+                                      longSide: max(8, fOptimizerLongSide))
+        let W = frame.width, H = frame.height
 
         // Target: bright centered disk on black background.
         var target = [Float](repeating: 0, count: H * W)
@@ -64,13 +75,20 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
         }
         let targetMLX = MLXArray(target).reshaped([1, 1, H, W])
 
+        // Seed dots uniformly in [0,1]² — fills the aspect-matched frame correctly.
         var pts = [Float](); pts.reserveCapacity(n * 2)
         for _ in 0..<n {
             pts.append(.random(in: 0...1))
             pts.append(.random(in: 0...1))
         }
         let ptsMLX = MLXArray(pts).reshaped([n, 2])
-        let sizesMLX = MLXArray([Float](repeating: 0.06, count: n * 2)).reshaped([n, 2])
+
+        // Per-axis sizes so dots render round on the non-square grid.
+        let (sw, sh) = frame.normalizedSize(radiusFraction: Double(fOptimizerDotRadius))
+        var sizesArr = [Float](); sizesArr.reserveCapacity(n * 2)
+        for _ in 0..<n { sizesArr.append(sw); sizesArr.append(sh) }
+        let sizesMLX = MLXArray(sizesArr).reshaped([n, 2])
+
         let valsMLX = MLXArray([Float](repeating: 0.8, count: n))
 
         var cfg = PointsOptimizer.OptimizerConfig()
