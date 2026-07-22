@@ -2,20 +2,27 @@
 //  ContentView.swift
 //  Goddard
 //
-//  Created by Sanjay Bakshi on 7/21/26.
+//  App root: owns the view model and lays out canvas + parameter panel,
+//  mirroring calligramy's MainView (minus the mode strip / stage timeline).
 //
 
 import SwiftUI
 
 struct ContentView: View {
+    @StateObject private var fViewModel = TgoddardViewModel()
+
     var body: some View {
-        VStack {
-            Image(systemName: "globe")
-                .imageScale(.large)
-                .foregroundStyle(.tint)
-            Text("Hello, world!")
+        HStack(spacing: 0) {
+            CanvasView()
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+            Divider()
+
+            ParameterPanelView()
         }
-        .padding()
+        .environmentObject(fViewModel)
+        .onAppear { fViewModel.buildOptimizer() }
+        .frame(minWidth: 700, minHeight: 480)
     }
 }
 
