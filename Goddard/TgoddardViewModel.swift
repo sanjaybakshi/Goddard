@@ -89,7 +89,7 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
         fOptimizer = opt
 
         fLoss = 0
-        fPreviewImage = Self.grayscaleImage(opt.renderPreview(), width: W, height: H)
+        fPreviewImage = cgImage(fromMLX: opt.renderPreview())
     }
 
     // MARK: - Run control
@@ -110,7 +110,6 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
 
     private func startLoopIfNeeded() {
         guard fLoopTask == nil, let opt = fOptimizer else { return }
-        let W = fWidth, H = fHeight
         fLoopTask = Task { [weak self] in
             var i = 0
             while let self, self.fRunning, !Task.isCancelled {
@@ -125,7 +124,7 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
                 // Throttle readback/publish to every other step.
                 if i % 2 == 0 {
                     self.fLoss = loss
-                    if let cg = Self.grayscaleImage(opt.renderPreview(), width: W, height: H) {
+                    if let cg = cgImage(fromMLX: opt.renderPreview()) {
                         self.fPreviewImage = cg
                     }
                 }
@@ -134,30 +133,4 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
         }
     }
 
-    // MARK: - MLXArray → CGImage
-
-    /// Converts a `[1,1,H,W]` float image (values ~[0,1], clamped) to an 8-bit
-    /// grayscale CGImage.
-    static func grayscaleImage(_ image: MLXArray, width: Int, height: Int) -> CGImage? {
-        let floats = image.asArray(Float.self)
-        let count = width * height
-        guard floats.count >= count else { return nil }
-
-        var bytes = [UInt8](repeating: 0, count: count)
-        for i in 0..<count {
-            let v = max(0, min(1, floats[i]))
-            bytes[i] = UInt8(v * 255)
-        }
-
-        let cs = CGColorSpaceCreateDeviceGray()
-        return bytes.withUnsafeMutableBytes { raw -> CGImage? in
-            guard let ctx = CGContext(data: raw.baseAddress,
-                                      width: width, height: height,
-                                      bitsPerComponent: 8, bytesPerRow: width,
-                                      space: cs,
-                                      bitmapInfo: CGImageAlphaInfo.none.rawValue)
-            else { return nil }
-            return ctx.makeImage()
-        }
-    }
 }
