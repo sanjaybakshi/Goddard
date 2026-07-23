@@ -9,19 +9,21 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var fViewModel = TgoddardViewModel()
+    @StateObject private var fModel = TgoddardModel()
 
     var body: some View {
         HStack(spacing: 0) {
-            MetalCanvasView()
+            MetalCanvasView(metal: fModel.fMetalViewModel)
+                .aspectRatio(CGFloat(fModel.fOutputWidth) / CGFloat(fModel.fOutputHeight),
+                             contentMode: .fit)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             Divider()
 
             ParameterPanelView()
         }
-        .environmentObject(fViewModel)
-        .onAppear { fViewModel.buildOptimizer() }
+        .environmentObject(fModel)
+        .onAppear { fModel.buildOptimizer() }
         .frame(minWidth: 700, minHeight: 480)
     }
 }

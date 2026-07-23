@@ -1,13 +1,13 @@
 //
-//  TgoddardViewModel.swift
+//  TgoddardModel.swift
 //  Goddard
 //
-//  Owns the SameEyesOptimizerKit optimizer and drives it in a live loop, publishing a
-//  grayscale preview of the current render for the (stub) canvas. Implicitly
-//  @MainActor under the target's MainActor-default isolation, so the loop runs
-//  on the main actor and yields between steps — MLX still runs its work on the
-//  GPU; only orchestration + readback touch the main thread. Fine at stub image
-//  sizes; move off-main when images/point counts grow.
+//  The app model: owns the SameEyesOptimizerKit optimizer, its params, and the
+//  live loop. Render-agnostic — it exposes a plain-Swift renderData() and
+//  owns a TmetalViewModel bridge that turns it into SplatInstances for the canvas
+//  (so this model needs no MetalKit import). Implicitly @MainActor under the
+//  target's MainActor-default isolation; the loop runs on the main actor and
+//  yields between steps (MLX runs its work on the GPU). Fine at stub sizes.
 //
 
 import Foundation
@@ -17,7 +17,11 @@ import MLX
 import SameEyesOptimizerKit
 import SameEyesUIKit
 
-final class TgoddardViewModel: ObservableObject, UndoableStore {
+final class TgoddardModel: ObservableObject, UndoableStore {
+
+    /// Render bridge the Metal canvas pulls from. Owned here; the bridge holds an
+    /// unowned back-ref, so no retain cycle.
+    lazy var fMetalViewModel = TmetalViewModel(model: self)
 
     // Live-tunable — applied to the optimizer at the top of each step.
     @Published var fLrPos:         Float = 0.01
@@ -41,11 +45,12 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
 
     // Read by the UI; mutate only via start()/stop()/toggleRun().
     @Published private(set) var fRunning: Bool = false
-    @Published private(set) var fPreviewImage: CGImage? = nil
     @Published private(set) var fLoss: Float = 0
 
     private var fOptimizer: PointsOptimizer?
     private var fLoopTask: Task<Void, Never>?
+    /// Goal image the optimizer converges toward; nil → synthetic disk stand-in.
+    private var fGoalImage: CGImage?
 
     // MARK: - Build / reset
 
@@ -63,17 +68,23 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
                                       longSide: max(8, fOptimizerLongSide))
         let W = frame.width, H = frame.height
 
-        // Target: bright centered disk on black background.
-        var target = [Float](repeating: 0, count: H * W)
-        let cx = Float(W) / 2, cy = Float(H) / 2
-        let r = Float(min(W, H)) * 0.3
-        for y in 0..<H {
-            for x in 0..<W {
-                let dx = Float(x) - cx, dy = Float(y) - cy
-                target[y * W + x] = (dx * dx + dy * dy <= r * r) ? 1 : 0
+        // Target: the loaded goal image (aspect-fit + grayscale into the frame),
+        // else a stand-in bright centered disk on black.
+        let targetMLX: MLXArray
+        if let goal = fGoalImage, let t = goalTarget(from: goal, width: W, height: H) {
+            targetMLX = t
+        } else {
+            var target = [Float](repeating: 0, count: H * W)
+            let cx = Float(W) / 2, cy = Float(H) / 2
+            let r = Float(min(W, H)) * 0.3
+            for y in 0..<H {
+                for x in 0..<W {
+                    let dx = Float(x) - cx, dy = Float(y) - cy
+                    target[y * W + x] = (dx * dx + dy * dy <= r * r) ? 1 : 0
+                }
             }
+            targetMLX = MLXArray(target).reshaped([1, 1, H, W])
         }
-        let targetMLX = MLXArray(target).reshaped([1, 1, H, W])
 
         // Seed dots uniformly in [0,1]² — fills the aspect-matched frame correctly.
         var pts = [Float](); pts.reserveCapacity(n * 2)
@@ -107,7 +118,15 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
         fOptimizer = opt
 
         fLoss = 0
-        fPreviewImage = cgImage(fromMLX: opt.renderPreview())
+    }
+
+    /// Load a goal image from a file and rebuild the optimizer toward it.
+    func loadGoalImage(url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let img = loadCGImage(from: url) else { return }
+        fGoalImage = img
+        buildOptimizer()
     }
 
     // MARK: - Run control
@@ -128,27 +147,45 @@ final class TgoddardViewModel: ObservableObject, UndoableStore {
 
     private func startLoopIfNeeded() {
         guard fLoopTask == nil, let opt = fOptimizer else { return }
-        fLoopTask = Task { [weak self] in
+        // Step OFF the main thread (mirrors AdamAnt) so heavy 512-res / 10k-point
+        // steps don't jank the 60fps display. The render side pulls via the
+        // optimizer's locked snapshotForRender(); step() itself is intentionally
+        // unlocked (a benign race, as in AdamAnt) to keep the loop unblocked.
+        fLoopTask = Task.detached { [weak self, opt] in
             var i = 0
-            while let self, self.fRunning, !Task.isCancelled {
-                // Push current live params into the optimizer.
-                opt.setLearningRates(pos: self.fLrPos, value: self.fLrValue, size: self.fLrSize)
-                opt.setMaxMotionPerStep(self.fMaxMotion)
-                opt.fOverlapWeight = self.fOverlapWeight
+            while !Task.isCancelled {
+                guard let self else { break }
+                // Pull live params + run flag from the main actor each step.
+                let params = await MainActor.run {
+                    () -> (lrPos: Float, lrValue: Float, lrSize: Float, maxMotion: Float, overlap: Float)? in
+                    self.fRunning
+                        ? (self.fLrPos, self.fLrValue, self.fLrSize, self.fMaxMotion, self.fOverlapWeight)
+                        : nil
+                }
+                guard let p = params else { break }   // stopped
+
+                opt.setLearningRates(pos: p.lrPos, value: p.lrValue, size: p.lrSize)
+                opt.setMaxMotionPerStep(p.maxMotion)
+                opt.fOverlapWeight = p.overlap
 
                 let loss = opt.step()
                 i += 1
-
-                // Throttle readback/publish to every other step.
                 if i % 2 == 0 {
-                    self.fLoss = loss
-                    if let cg = cgImage(fromMLX: opt.renderPreview()) {
-                        self.fPreviewImage = cg
-                    }
+                    await MainActor.run { self.fLoss = loss }
                 }
                 await Task.yield()
             }
         }
+    }
+
+    /// Plain-Swift conversion of the current optimizer state for the render bridge
+    /// (MLX → Swift arrays). Fixed radius for now. Reads via the optimizer's locked
+    /// snapshotForRender(), so it's safe to call from the render thread while the
+    /// background loop steps.
+    func renderData() -> (points: [SIMD2<Float>], values: [Float], radius: Float)? {
+        guard let opt = fOptimizer else { return nil }
+        let (ptsMLX, _, valsMLX) = opt.snapshotForRender()
+        return (mlxArrayToSIMD2Vector(ptsMLX), mlxArrayToFloatVector(valsMLX), fOptimizerDotRadius)
     }
 
 }
