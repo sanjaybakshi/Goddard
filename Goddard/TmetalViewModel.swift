@@ -9,6 +9,7 @@
 //
 
 import simd
+import Metal
 import SameEyesMetalKit
 
 final class TmetalViewModel {
@@ -18,9 +19,27 @@ final class TmetalViewModel {
         self.model = model
     }
 
-    /// Render uniforms (falloff etc.) for the current frame — display-only params.
+    /// Render uniforms (falloff, dot color) for the current frame — display-only.
     func renderUniforms(viewport: SIMD2<Float>) -> RenderUniforms {
-        RenderUniforms(viewport: viewport, falloffPower: model.fFalloffPower)
+        RenderUniforms(viewport: viewport,
+                       falloffPower: model.fFalloffPower,
+                       splatColor: model.fDotColor)
+    }
+
+    /// Canvas clear color for the current frame (the display background). Pulled by
+    /// the canvas each tick so it stays live as the user picks a color.
+    func backgroundClearColor() -> MTLClearColor {
+        let c = model.fBackgroundColor
+        return MTLClearColor(red: Double(c.x), green: Double(c.y), blue: Double(c.z), alpha: 1)
+    }
+
+    /// Tonal grade for the output post-process pass — display-only, live.
+    func gradeUniforms() -> GradeUniforms {
+        GradeUniforms(blackPoint: model.fOutBlackPoint,
+                      whitePoint: model.fOutWhitePoint,
+                      brightness: model.fOutBrightness,
+                      contrast: model.fOutContrast,
+                      gamma: model.fOutGamma)
     }
 
     /// Current splats for the renderer to pull each frame.

@@ -41,8 +41,17 @@ extension TgoddardModel {
                               optimizerLongSide: fOptimizerLongSide,
                               optimizerPointCount: fOptimizerPointCount,
                               optimizerDotRadius: fOptimizerDotRadius,
+                              invertRender: fInvertRender,
                               outputWidth: fOutputWidth, outputHeight: fOutputHeight,
                               displayRadius: fDisplayRadius, falloffPower: fFalloffPower,
+                              backgroundColor: fBackgroundColor, dotColor: fDotColor,
+                              outBlackPoint: fOutBlackPoint, outWhitePoint: fOutWhitePoint,
+                              outBrightness: fOutBrightness, outContrast: fOutContrast,
+                              outGamma: fOutGamma,
+                              goalInvert: fGoalInvert, goalBlur: fGoalBlur,
+                              goalBlackPoint: fGoalBlackPoint, goalWhitePoint: fGoalWhitePoint,
+                              goalBrightness: fGoalBrightness, goalContrast: fGoalContrast,
+                              goalGamma: fGoalGamma,
                               goalImagePNG: png)
     }
 
@@ -52,12 +61,23 @@ extension TgoddardModel {
         fOptimizerLongSide = p.optimizerLongSide
         fOptimizerPointCount = p.optimizerPointCount
         fOptimizerDotRadius = p.optimizerDotRadius
+        fInvertRender = p.invertRender
         fOutputWidth = p.outputWidth; fOutputHeight = p.outputHeight
         fDisplayRadius = p.displayRadius; fFalloffPower = p.falloffPower
+        fBackgroundColor = p.backgroundColor; fDotColor = p.dotColor
+        fOutBlackPoint = p.outBlackPoint; fOutWhitePoint = p.outWhitePoint
+        fOutBrightness = p.outBrightness; fOutContrast = p.outContrast
+        fOutGamma = p.outGamma
+
+        fGoalInvert = p.goalInvert; fGoalBlur = p.goalBlur
+        fGoalBlackPoint = p.goalBlackPoint; fGoalWhitePoint = p.goalWhitePoint
+        fGoalBrightness = p.goalBrightness; fGoalContrast = p.goalContrast
+        fGoalGamma = p.goalGamma
 
         // Goal image is embedded in the project — decode it (or nil → disk).
         fGoalImage = p.goalImagePNG.flatMap { cgImage(fromData: $0) }
 
+        refreshGoalThumbnail()
         buildOptimizer()
     }
 }

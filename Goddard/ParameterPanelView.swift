@@ -13,11 +13,15 @@ import SameEyesUIKit
 
 struct ParameterPanelView: View {
     @EnvironmentObject var fModel: TgoddardModel
+    @Environment(\.undoManager) private var undoManager
 
     @State private var showRun       = true
+    @State private var showGoalImage = true
     @State private var showOptimizer = true
+    @State private var showDebug     = false
     @State private var showSetup     = false
     @State private var showRenderer  = true
+    @State private var showOutput    = false
     @State private var showProject   = true
     @State private var showGoalImporter = false
 
@@ -40,9 +44,55 @@ struct ParameterPanelView: View {
                                 fModel.buildOptimizer()
                             }
                         }
-                        Button("Load Goal Image…") { showGoalImporter = true }
                         Text(String(format: "loss  %.6f", fModel.fLoss))
                             .font(.system(.callout, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 6)
+                }
+
+                SectionBox("Goal Image", isExpanded: $showGoalImage) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Button("Load Goal Image…") { showGoalImporter = true }
+
+                        if let thumb = fModel.fGoalThumbnail {
+                            Image(decorative: thumb, scale: 1.0)
+                                .resizable()
+                                .interpolation(.high)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxHeight: 160)
+                                .border(Color.secondary.opacity(0.3))
+                        } else {
+                            Text("No goal image loaded")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Toggle("Invert", isOn: Binding(
+                            get: { fModel.fGoalInvert },
+                            set: { fModel.setValue(\.fGoalInvert, to: $0,
+                                                   named: "Toggle invert", using: undoManager) }))
+
+                        FloatSliderRow(title: "Blur", store: fModel, undoKeyPath: \.fGoalBlur,
+                                       value: $fModel.fGoalBlur, range: 0...0.2,
+                                       fractionDigits: 3, actionName: "Change goal blur")
+                        FloatSliderRow(title: "Black point", store: fModel, undoKeyPath: \.fGoalBlackPoint,
+                                       value: $fModel.fGoalBlackPoint, range: 0...1,
+                                       fractionDigits: 3, actionName: "Change black point")
+                        FloatSliderRow(title: "White point", store: fModel, undoKeyPath: \.fGoalWhitePoint,
+                                       value: $fModel.fGoalWhitePoint, range: 0...1,
+                                       fractionDigits: 3, actionName: "Change white point")
+                        FloatSliderRow(title: "Brightness", store: fModel, undoKeyPath: \.fGoalBrightness,
+                                       value: $fModel.fGoalBrightness, range: -1...1,
+                                       fractionDigits: 3, actionName: "Change brightness")
+                        FloatSliderRow(title: "Contrast", store: fModel, undoKeyPath: \.fGoalContrast,
+                                       value: $fModel.fGoalContrast, range: 0...3,
+                                       fractionDigits: 3, actionName: "Change contrast")
+                        FloatSliderRow(title: "Gamma", store: fModel, undoKeyPath: \.fGoalGamma,
+                                       value: $fModel.fGoalGamma, range: 0.1...4,
+                                       fractionDigits: 3, actionName: "Change gamma")
+                        Text("Preview is live; applied to optimization on Reset")
+                            .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     .padding(.top, 6)
@@ -75,6 +125,21 @@ struct ParameterPanelView: View {
                     .padding(.top, 6)
                 }
 
+                SectionBox("Debug", isExpanded: $showDebug) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Button("Render optimizer image") { fModel.refreshDebugImage() }
+                        if let img = fModel.fDebugImage {
+                            Image(decorative: img, scale: 1.0)
+                                .resizable()
+                                .interpolation(.none)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxHeight: 160)
+                                .border(Color.secondary.opacity(0.3))
+                        }
+                    }
+                    .padding(.top, 6)
+                }
+
                 SectionBox("Setup", isExpanded: $showSetup) {
                     VStack(spacing: 8) {
                         IntSliderRow(title: "Points", store: fModel, undoKeyPath: \.fOptimizerPointCount,
@@ -83,6 +148,15 @@ struct ParameterPanelView: View {
                         IntSliderRow(title: "Optimize px", store: fModel, undoKeyPath: \.fOptimizerLongSide,
                                      value: $fModel.fOptimizerLongSide, range: 32...1024,
                                      actionName: "Change optimize resolution")
+                        Picker("", selection: Binding(
+                            get: { fModel.fInvertRender },
+                            set: { fModel.setValue(\.fInvertRender, to: $0,
+                                                   named: "Change polarity", using: undoManager) })) {
+                            Text("White on black").tag(false)
+                            Text("Black on white").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
                         Text("Applied on Reset")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -110,7 +184,39 @@ struct ParameterPanelView: View {
                         FloatSliderRow(title: "Flatness", store: fModel, undoKeyPath: \.fFalloffPower,
                                        value: $fModel.fFalloffPower, range: 1...16,
                                        fractionDigits: 1, actionName: "Change flatness")
-                        Text("Display radius + flatness are live")
+
+                        Divider()
+
+                        ColorPicker("Background", selection: colorBinding(\.fBackgroundColor,
+                                    named: "Change background color"), supportsOpacity: false)
+                        ColorPicker("Dot color", selection: colorBinding(\.fDotColor,
+                                    named: "Change dot color"), supportsOpacity: false)
+
+                        Text("Display radius, flatness, and colors are live")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 6)
+                }
+
+                SectionBox("Output", isExpanded: $showOutput) {
+                    VStack(spacing: 8) {
+                        FloatSliderRow(title: "Black point", store: fModel, undoKeyPath: \.fOutBlackPoint,
+                                       value: $fModel.fOutBlackPoint, range: 0...1,
+                                       fractionDigits: 3, actionName: "Change output black point")
+                        FloatSliderRow(title: "White point", store: fModel, undoKeyPath: \.fOutWhitePoint,
+                                       value: $fModel.fOutWhitePoint, range: 0...1,
+                                       fractionDigits: 3, actionName: "Change output white point")
+                        FloatSliderRow(title: "Brightness", store: fModel, undoKeyPath: \.fOutBrightness,
+                                       value: $fModel.fOutBrightness, range: -1...1,
+                                       fractionDigits: 3, actionName: "Change output brightness")
+                        FloatSliderRow(title: "Contrast", store: fModel, undoKeyPath: \.fOutContrast,
+                                       value: $fModel.fOutContrast, range: 0...3,
+                                       fractionDigits: 3, actionName: "Change output contrast")
+                        FloatSliderRow(title: "Gamma", store: fModel, undoKeyPath: \.fOutGamma,
+                                       value: $fModel.fOutGamma, range: 0.1...4,
+                                       fractionDigits: 3, actionName: "Change output gamma")
+                        Text("Tonal grade on the rendered frame; live")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -136,6 +242,24 @@ struct ParameterPanelView: View {
                 fModel.loadGoalImage(url: url)
             }
         }
+    }
+
+    /// Bridges a model `SIMD3<Float>` rgb color to a SwiftUI `Color` for a
+    /// ColorPicker, routing writes through the undo layer (each pick = one step).
+    private func colorBinding(_ keyPath: ReferenceWritableKeyPath<TgoddardModel, SIMD3<Float>>,
+                              named: String) -> Binding<Color> {
+        Binding(
+            get: {
+                let c = fModel[keyPath: keyPath]
+                return Color(.sRGB, red: Double(c.x), green: Double(c.y), blue: Double(c.z))
+            },
+            set: { newColor in
+                let ns = NSColor(newColor).usingColorSpace(.sRGB) ?? .white
+                let rgb = SIMD3<Float>(Float(ns.redComponent),
+                                       Float(ns.greenComponent),
+                                       Float(ns.blueComponent))
+                fModel.setValue(keyPath, to: rgb, named: named, using: undoManager)
+            })
     }
 
     /// A .goddardproject file type derived from the extension (no Info.plist needed).

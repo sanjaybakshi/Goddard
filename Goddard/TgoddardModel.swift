@@ -37,6 +37,10 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     @Published var fOptimizerPointCount: Int = 10000
     /// Initial dot radius as a fraction of the frame's long side.
     @Published var fOptimizerDotRadius:  Float = 0.005
+    /// Render polarity for the optimizer's target match. false = dots emit light
+    /// (fill the light regions; "white on black"); true = dots are ink (fill the
+    /// dark regions; "black on white"). Baked into the loss at build → applied on Reset.
+    @Published var fInvertRender: Bool = false
 
     // Output frame — user-specified, arbitrary aspect. Sets the optimize aspect
     // and the artifact resolution. Applied on rebuild (Reset).
@@ -49,9 +53,37 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     @Published var fDisplayRadius: Float = 0.005
     @Published var fFalloffPower:  Float = 4
 
+    // Display colors — renderer-only (never seen by the optimizer). Background is
+    // the canvas clear color; dot color tints the splats. rgb in [0,1].
+    @Published var fBackgroundColor: SIMD3<Float> = SIMD3(0.06, 0.06, 0.07)
+    @Published var fDotColor:        SIMD3<Float> = SIMD3(1, 1, 1)
+
+    // Output grade — a tonal curve on the final composited frame (a renderer
+    // post-process). Live; never touches the optimizer. Identity = no change.
+    @Published var fOutBlackPoint: Float = 0
+    @Published var fOutWhitePoint: Float = 1
+    @Published var fOutBrightness: Float = 0
+    @Published var fOutContrast:   Float = 1
+    @Published var fOutGamma:      Float = 1
+
+    // Goal image adjustments — applied to the target on rebuild (Reset); the
+    // preview thumbnail (fGoalThumbnail) updates LIVE as these change.
+    @Published var fGoalInvert:     Bool  = false { didSet { refreshGoalThumbnail() } }
+    @Published var fGoalBlur:       Float = 0     { didSet { refreshGoalThumbnail() } }
+    @Published var fGoalBlackPoint: Float = 0     { didSet { refreshGoalThumbnail() } }
+    @Published var fGoalWhitePoint: Float = 1     { didSet { refreshGoalThumbnail() } }
+    @Published var fGoalBrightness: Float = 0     { didSet { refreshGoalThumbnail() } }
+    @Published var fGoalContrast:   Float = 1     { didSet { refreshGoalThumbnail() } }
+    @Published var fGoalGamma:      Float = 1     { didSet { refreshGoalThumbnail() } }
+    /// Processed-target preview (grayscale) reflecting goal image + adjustments.
+    @Published private(set) var fGoalThumbnail: CGImage? = nil
+
     // Read by the UI; mutate only via start()/stop()/toggleRun().
     @Published private(set) var fRunning: Bool = false
     @Published private(set) var fLoss: Float = 0
+    /// Debug: the optimizer's current loss-space render (grayscale), refreshed
+    /// on demand by a button. nil until first requested.
+    @Published private(set) var fDebugImage: CGImage? = nil
 
     private var fOptimizer: PointsOptimizer?
     private var fLoopTask: Task<Void, Never>?
@@ -78,7 +110,8 @@ final class TgoddardModel: ObservableObject, UndoableStore {
         // Target: the loaded goal image (aspect-fit + grayscale into the frame),
         // else a stand-in bright centered disk on black.
         let targetMLX: MLXArray
-        if let goal = fGoalImage, let t = goalTarget(from: goal, width: W, height: H) {
+        if let goal = fGoalImage,
+           let t = goalTarget(from: goal, width: W, height: H, adjustments: currentGoalAdjustments()) {
             targetMLX = t
         } else {
             var target = [Float](repeating: 0, count: H * W)
@@ -117,7 +150,7 @@ final class TgoddardModel: ObservableObject, UndoableStore {
         cfg.overlapWeight = fOverlapWeight
 
         let rcfg = PointsOptimizer.RendererConfig(imageWidth: W, imageHeight: H,
-                                                  invert: false, radiusScale: 1.0)
+                                                  invert: fInvertRender, radiusScale: 1.0)
 
         let opt = PointsOptimizer(config: cfg, rendererConfig: rcfg,
                                   initialPtSize: sizesMLX, target: targetMLX)
@@ -135,7 +168,26 @@ final class TgoddardModel: ObservableObject, UndoableStore {
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let img = loadCGImage(from: url) else { return }
         fGoalImage = img
+        refreshGoalThumbnail()
         buildOptimizer()
+    }
+
+    /// The current goal adjustments assembled from the model params.
+    func currentGoalAdjustments() -> GoalAdjustments {
+        GoalAdjustments(invert: fGoalInvert, blur: fGoalBlur,
+                        blackPoint: fGoalBlackPoint, whitePoint: fGoalWhitePoint,
+                        brightness: fGoalBrightness, contrast: fGoalContrast, gamma: fGoalGamma)
+    }
+
+    /// Recompute the small processed-target preview (grayscale) from the current
+    /// goal image + adjustments. Live — driven by the goal-param didSets.
+    func refreshGoalThumbnail() {
+        guard let goal = fGoalImage else { fGoalThumbnail = nil; return }
+        let frame = OptimizationFrame(outputWidth: fOutputWidth, outputHeight: fOutputHeight, longSide: 256)
+        if let t = goalTarget(from: goal, width: frame.width, height: frame.height,
+                              adjustments: currentGoalAdjustments()) {
+            fGoalThumbnail = cgImage(fromMLX: t)
+        }
     }
 
     // MARK: - Run control
@@ -195,6 +247,13 @@ final class TgoddardModel: ObservableObject, UndoableStore {
         guard let opt = fOptimizer else { return nil }
         let (ptsMLX, _, valsMLX) = opt.snapshotForRender()
         return (mlxArrayToSIMD2Vector(ptsMLX), mlxArrayToFloatVector(valsMLX), fDisplayRadius)
+    }
+
+    /// One-shot debug render: the optimizer's current loss-space image (the
+    /// grayscale render `renderPoints` produces) → `fDebugImage`. Driven by a button.
+    func refreshDebugImage() {
+        guard let opt = fOptimizer else { return }
+        fDebugImage = cgImage(fromMLX: opt.renderPreview())
     }
 
 }

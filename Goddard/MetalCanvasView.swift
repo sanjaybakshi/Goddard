@@ -61,19 +61,18 @@ struct MetalCanvasView: NSViewRepresentable {
 
         func draw(in view: MTKView) {
             guard let queue, let renderer,
-                  let pass = view.currentRenderPassDescriptor,
                   let drawable = view.currentDrawable,
-                  let cmd = queue.makeCommandBuffer(),
-                  let encoder = cmd.makeRenderCommandEncoder(descriptor: pass)
+                  let cmd = queue.makeCommandBuffer()
             else { return }
 
             let splats = metal.currentSplats()              // pulled each tick
-            let uniforms = metal.renderUniforms(
-                viewport: SIMD2(Float(view.drawableSize.width), Float(view.drawableSize.height))
-            )
-            renderer.encode([.splats(splats)], uniforms: uniforms, into: encoder)
-
-            encoder.endEncoding()
+            let viewport = SIMD2(Float(view.drawableSize.width), Float(view.drawableSize.height))
+            renderer.render([.splats(splats)],
+                            uniforms: metal.renderUniforms(viewport: viewport),
+                            grade: metal.gradeUniforms(),
+                            clearColor: metal.backgroundClearColor(),
+                            drawable: drawable.texture,
+                            commandBuffer: cmd)
             cmd.present(drawable)
             cmd.commit()
         }
