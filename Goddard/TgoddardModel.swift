@@ -24,19 +24,19 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     lazy var fMetalViewModel = TmetalViewModel(model: self)
 
     // Live-tunable — applied to the optimizer at the top of each step.
-    @Published var fLrPos:         Float = 0.01
-    @Published var fLrValue:       Float = 0.01
-    @Published var fLrSize:        Float = 0.005
+    @Published var fLrPos:         Float = 0.0001
+    @Published var fLrValue:       Float = 0
+    @Published var fLrSize:        Float = 0
     @Published var fMaxMotion:     Float = 0.02
     @Published var fOverlapWeight: Float = 0.0
 
     // Optimizer setup — applied on rebuild (Reset). fOptimizerLongSide is the
     // long side of the aspect-matched grid; OptimizationFrame derives the other
     // axis from the output aspect.
-    @Published var fOptimizerLongSide:   Int = 128
-    @Published var fOptimizerPointCount: Int = 64
+    @Published var fOptimizerLongSide:   Int = 512
+    @Published var fOptimizerPointCount: Int = 10000
     /// Initial dot radius as a fraction of the frame's long side.
-    @Published var fOptimizerDotRadius:  Float = 0.06
+    @Published var fOptimizerDotRadius:  Float = 0.005
 
     // Output frame — user-specified, arbitrary aspect. Sets the optimize aspect
     // and the artifact resolution. Applied on rebuild (Reset).
@@ -50,7 +50,8 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     private var fOptimizer: PointsOptimizer?
     private var fLoopTask: Task<Void, Never>?
     /// Goal image the optimizer converges toward; nil → synthetic disk stand-in.
-    private var fGoalImage: CGImage?
+    /// Internal (not private) so TgoddardModel+FileIO can read/embed it.
+    var fGoalImage: CGImage?
 
     // MARK: - Build / reset
 
@@ -120,7 +121,9 @@ final class TgoddardModel: ObservableObject, UndoableStore {
         fLoss = 0
     }
 
-    /// Load a goal image from a file and rebuild the optimizer toward it.
+    /// Load a goal image from a file and rebuild the optimizer toward it. The
+    /// image is held in memory; a saved project embeds a downscaled PNG copy, so
+    /// no file reference/bookmark is needed.
     func loadGoalImage(url: URL) {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }

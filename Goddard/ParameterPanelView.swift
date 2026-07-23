@@ -7,6 +7,7 @@
 //
 
 import SwiftUI
+import AppKit
 import UniformTypeIdentifiers
 import SameEyesUIKit
 
@@ -16,6 +17,7 @@ struct ParameterPanelView: View {
     @State private var showRun       = true
     @State private var showOptimizer = true
     @State private var showSetup     = false
+    @State private var showProject   = true
     @State private var showGoalImporter = false
 
     var body: some View {
@@ -75,8 +77,8 @@ struct ParameterPanelView: View {
                                      value: $fModel.fOptimizerLongSide, range: 32...1024,
                                      actionName: "Change optimize resolution")
                         FloatSliderRow(title: "Dot radius", store: fModel, undoKeyPath: \.fOptimizerDotRadius,
-                                       value: $fModel.fOptimizerDotRadius, range: 0.005...0.2,
-                                       fractionDigits: 3, actionName: "Change dot radius")
+                                       value: $fModel.fOptimizerDotRadius, range: 0.001...0.2,
+                                       fractionDigits: 4, actionName: "Change dot radius")
 
                         Divider()
 
@@ -92,6 +94,14 @@ struct ParameterPanelView: View {
                     }
                     .padding(.top, 6)
                 }
+
+                SectionBox("Project", isExpanded: $showProject) {
+                    HStack {
+                        Button("Open Project…") { openProject() }
+                        Button("Save Project…") { saveProject() }
+                    }
+                    .padding(.top, 6)
+                }
             }
             .padding()
         }
@@ -103,6 +113,29 @@ struct ParameterPanelView: View {
             if case .success(let urls) = result, let url = urls.first {
                 fModel.loadGoalImage(url: url)
             }
+        }
+    }
+
+    /// A .goddardproject file type derived from the extension (no Info.plist needed).
+    private var projectType: UTType {
+        UTType(filenameExtension: "goddardproject") ?? .json
+    }
+
+    private func saveProject() {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = [projectType]
+        panel.nameFieldStringValue = "Untitled.goddardproject"
+        if panel.runModal() == .OK, let url = panel.url {
+            try? fModel.writeProject(to: url)
+        }
+    }
+
+    private func openProject() {
+        let panel = NSOpenPanel()
+        panel.allowedContentTypes = [projectType]
+        panel.allowsMultipleSelection = false
+        if panel.runModal() == .OK, let url = panel.url {
+            try? fModel.readProject(from: url)
         }
     }
 }
