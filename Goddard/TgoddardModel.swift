@@ -43,6 +43,12 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     @Published var fOutputWidth:  Int = 1280
     @Published var fOutputHeight: Int = 720
 
+    // Renderer — display-only, LIVE (no rebuild). fDisplayRadius = splat size as a
+    // fraction of the drawable's short side; fFalloffPower = super-Gaussian
+    // exponent (2 = Gaussian, higher = flatter).
+    @Published var fDisplayRadius: Float = 0.005
+    @Published var fFalloffPower:  Float = 4
+
     // Read by the UI; mutate only via start()/stop()/toggleRun().
     @Published private(set) var fRunning: Bool = false
     @Published private(set) var fLoss: Float = 0
@@ -188,7 +194,7 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     func renderData() -> (points: [SIMD2<Float>], values: [Float], radius: Float)? {
         guard let opt = fOptimizer else { return nil }
         let (ptsMLX, _, valsMLX) = opt.snapshotForRender()
-        return (mlxArrayToSIMD2Vector(ptsMLX), mlxArrayToFloatVector(valsMLX), fOptimizerDotRadius)
+        return (mlxArrayToSIMD2Vector(ptsMLX), mlxArrayToFloatVector(valsMLX), fDisplayRadius)
     }
 
 }

@@ -17,6 +17,7 @@ struct ParameterPanelView: View {
     @State private var showRun       = true
     @State private var showOptimizer = true
     @State private var showSetup     = false
+    @State private var showRenderer  = true
     @State private var showProject   = true
     @State private var showGoalImporter = false
 
@@ -64,6 +65,12 @@ struct ParameterPanelView: View {
                         FloatSliderRow(title: "Overlap wt", store: fModel, undoKeyPath: \.fOverlapWeight,
                                        value: $fModel.fOverlapWeight, range: 0...5,
                                        fractionDigits: 2, actionName: "Change overlap weight")
+                        FloatSliderRow(title: "Dot radius", store: fModel, undoKeyPath: \.fOptimizerDotRadius,
+                                       value: $fModel.fOptimizerDotRadius, range: 0.001...0.2,
+                                       fractionDigits: 4, actionName: "Change dot radius")
+                        Text("Applied on Reset")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                     .padding(.top, 6)
                 }
@@ -76,19 +83,34 @@ struct ParameterPanelView: View {
                         IntSliderRow(title: "Optimize px", store: fModel, undoKeyPath: \.fOptimizerLongSide,
                                      value: $fModel.fOptimizerLongSide, range: 32...1024,
                                      actionName: "Change optimize resolution")
-                        FloatSliderRow(title: "Dot radius", store: fModel, undoKeyPath: \.fOptimizerDotRadius,
-                                       value: $fModel.fOptimizerDotRadius, range: 0.001...0.2,
-                                       fractionDigits: 4, actionName: "Change dot radius")
+                        Text("Applied on Reset")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.top, 6)
+                }
 
-                        Divider()
-
+                SectionBox("Renderer", isExpanded: $showRenderer) {
+                    VStack(spacing: 8) {
                         IntSliderRow(title: "Output W", store: fModel, undoKeyPath: \.fOutputWidth,
                                      value: $fModel.fOutputWidth, range: 64...8192,
                                      actionName: "Change output width")
                         IntSliderRow(title: "Output H", store: fModel, undoKeyPath: \.fOutputHeight,
                                      value: $fModel.fOutputHeight, range: 64...8192,
                                      actionName: "Change output height")
-                        Text("Applied on Reset (output sets the optimize aspect)")
+                        Text("Output applied on Reset (sets the optimize aspect)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Divider()
+
+                        FloatSliderRow(title: "Display radius", store: fModel, undoKeyPath: \.fDisplayRadius,
+                                       value: $fModel.fDisplayRadius, range: 0.001...0.2,
+                                       fractionDigits: 4, actionName: "Change display radius")
+                        FloatSliderRow(title: "Flatness", store: fModel, undoKeyPath: \.fFalloffPower,
+                                       value: $fModel.fFalloffPower, range: 1...16,
+                                       fractionDigits: 1, actionName: "Change flatness")
+                        Text("Display radius + flatness are live")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

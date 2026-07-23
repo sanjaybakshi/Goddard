@@ -68,7 +68,7 @@ struct MetalCanvasView: NSViewRepresentable {
             else { return }
 
             let splats = metal.currentSplats()              // pulled each tick
-            let uniforms = RenderUniforms(
+            let uniforms = metal.renderUniforms(
                 viewport: SIMD2(Float(view.drawableSize.width), Float(view.drawableSize.height))
             )
             renderer.encode([.splats(splats)], uniforms: uniforms, into: encoder)

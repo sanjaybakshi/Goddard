@@ -18,6 +18,11 @@ final class TmetalViewModel {
         self.model = model
     }
 
+    /// Render uniforms (falloff etc.) for the current frame — display-only params.
+    func renderUniforms(viewport: SIMD2<Float>) -> RenderUniforms {
+        RenderUniforms(viewport: viewport, falloffPower: model.fFalloffPower)
+    }
+
     /// Current splats for the renderer to pull each frame.
     func currentSplats() -> [SplatInstance] {
         guard let s = model.renderData() else { return [] }

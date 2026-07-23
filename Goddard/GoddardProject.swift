@@ -27,6 +27,10 @@ struct GoddardProject: Codable {
     var outputWidth: Int
     var outputHeight: Int
 
+    // Renderer (display-only).
+    var displayRadius: Float
+    var falloffPower: Float
+
     /// The goal image, embedded as PNG (downscaled). nil if no goal was set.
     /// Codable encodes Data as base64 in JSON — self-contained, no file reference.
     var goalImagePNG: Data?
@@ -34,13 +38,14 @@ struct GoddardProject: Codable {
     enum CodingKeys: String, CodingKey {
         case schemaVersion, lrPos, lrValue, lrSize, maxMotion, overlapWeight
         case optimizerLongSide, optimizerPointCount, optimizerDotRadius
-        case outputWidth, outputHeight, goalImagePNG
+        case outputWidth, outputHeight, displayRadius, falloffPower, goalImagePNG
     }
 
     init(schemaVersion: Int = 1,
          lrPos: Float, lrValue: Float, lrSize: Float, maxMotion: Float, overlapWeight: Float,
          optimizerLongSide: Int, optimizerPointCount: Int, optimizerDotRadius: Float,
-         outputWidth: Int, outputHeight: Int, goalImagePNG: Data?) {
+         outputWidth: Int, outputHeight: Int,
+         displayRadius: Float, falloffPower: Float, goalImagePNG: Data?) {
         self.schemaVersion = schemaVersion
         self.lrPos = lrPos; self.lrValue = lrValue; self.lrSize = lrSize
         self.maxMotion = maxMotion; self.overlapWeight = overlapWeight
@@ -48,6 +53,7 @@ struct GoddardProject: Codable {
         self.optimizerPointCount = optimizerPointCount
         self.optimizerDotRadius = optimizerDotRadius
         self.outputWidth = outputWidth; self.outputHeight = outputHeight
+        self.displayRadius = displayRadius; self.falloffPower = falloffPower
         self.goalImagePNG = goalImagePNG
     }
 
@@ -66,6 +72,8 @@ struct GoddardProject: Codable {
         optimizerDotRadius  = try c.decodeIfPresent(Float.self, forKey: .optimizerDotRadius) ?? 0.005
         outputWidth         = try c.decodeIfPresent(Int.self,   forKey: .outputWidth) ?? 1280
         outputHeight        = try c.decodeIfPresent(Int.self,   forKey: .outputHeight) ?? 720
+        displayRadius       = try c.decodeIfPresent(Float.self, forKey: .displayRadius) ?? 0.005
+        falloffPower        = try c.decodeIfPresent(Float.self, forKey: .falloffPower) ?? 4
         goalImagePNG        = try c.decodeIfPresent(Data.self,  forKey: .goalImagePNG)
     }
 

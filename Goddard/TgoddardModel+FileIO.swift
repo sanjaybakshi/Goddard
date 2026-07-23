@@ -42,6 +42,7 @@ extension TgoddardModel {
                               optimizerPointCount: fOptimizerPointCount,
                               optimizerDotRadius: fOptimizerDotRadius,
                               outputWidth: fOutputWidth, outputHeight: fOutputHeight,
+                              displayRadius: fDisplayRadius, falloffPower: fFalloffPower,
                               goalImagePNG: png)
     }
 
@@ -52,6 +53,7 @@ extension TgoddardModel {
         fOptimizerPointCount = p.optimizerPointCount
         fOptimizerDotRadius = p.optimizerDotRadius
         fOutputWidth = p.outputWidth; fOutputHeight = p.outputHeight
+        fDisplayRadius = p.displayRadius; fFalloffPower = p.falloffPower
 
         // Goal image is embedded in the project — decode it (or nil → disk).
         fGoalImage = p.goalImagePNG.flatMap { cgImage(fromData: $0) }
