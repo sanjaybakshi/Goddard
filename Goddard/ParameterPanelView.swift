@@ -44,9 +44,7 @@ struct ParameterPanelView: View {
                                 fModel.buildOptimizer()
                             }
                         }
-                        Text(String(format: "loss  %.6f", fModel.fLoss))
-                            .font(.system(.callout, design: .monospaced))
-                            .foregroundStyle(.secondary)
+                        RunReadout(telemetry: fModel.fTelemetry)
                     }
                     .padding(.top, 6)
                 }
