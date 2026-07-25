@@ -17,4 +17,8 @@ final class TrunTelemetry: ObservableObject {
     @Published var loss: Float = 0
     /// Measured optimizer throughput (steps/sec); 0 when stopped.
     @Published var stepsPerSecond: Double = 0
+    /// Points sent to the optimizer (inside the goal region). Set at build.
+    @Published var optimizedPoints: Int = 0
+    /// Total seeded points (optimized + non-goal). Set at build.
+    @Published var totalPoints: Int = 0
 }

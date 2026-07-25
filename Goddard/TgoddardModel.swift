@@ -18,6 +18,13 @@ import MLX
 import SameEyesOptimizerKit
 import SameEyesUIKit
 
+/// A point excluded from the optimizer (outside the goal region): frozen,
+/// display-only. Position is normalized [0,1]²; value is its splat brightness.
+struct NonGoalPoint {
+    var position: SIMD2<Float>
+    var value: Float
+}
+
 final class TgoddardModel: ObservableObject, UndoableStore {
 
     /// Render bridge the Metal canvas pulls from. Owned here; the bridge holds an
@@ -35,9 +42,13 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     // long side of the aspect-matched grid; OptimizationFrame derives the other
     // axis from the output aspect.
     @Published var fOptimizerLongSide:   Int = 512
-    @Published var fOptimizerPointCount: Int = 10000
+    /// Changing the point count restarts the optimizer (no continuity expected):
+    /// the loop stops immediately and a debounced rebuild reseeds at the new count.
+    @Published var fOptimizerPointCount: Int = 10000 { didSet { scheduleRebuild() } }
     /// Initial dot radius as a fraction of the frame's long side.
     @Published var fOptimizerDotRadius:  Float = 0.005
+    /// How the initial points are laid out. Changing it restarts the optimizer.
+    @Published var fPointLayout: PointLayout = .random { didSet { scheduleRebuild() } }
     /// Render polarity for the optimizer's target match. false = dots emit light
     /// (fill the light regions; "white on black"); true = dots are ink (fill the
     /// dark regions; "black on white"). Baked into the loss at build → applied on Reset.
@@ -76,6 +87,13 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     @Published var fGoalBrightness: Float = 0     { didSet { refreshGoalThumbnail() } }
     @Published var fGoalContrast:   Float = 1     { didSet { refreshGoalThumbnail() } }
     @Published var fGoalGamma:      Float = 1     { didSet { refreshGoalThumbnail() } }
+
+    // Goal placement in the frame — normalized [0,1] center + scale (y-down, the
+    // master space). Live preview; applied to the target on Reset.
+    @Published var fGoalCenterX: Float = 0.5 { didSet { refreshGoalThumbnail() } }
+    @Published var fGoalCenterY: Float = 0.5 { didSet { refreshGoalThumbnail() } }
+    @Published var fGoalScale:   Float = 1   { didSet { refreshGoalThumbnail() } }
+
     /// Processed-target preview (grayscale) reflecting goal image + adjustments.
     @Published private(set) var fGoalThumbnail: CGImage? = nil
 
@@ -94,9 +112,16 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     /// The optimizer + its off-main loop. Managed in TgoddardModel+Optimization.swift.
     var fOptimizer: PointsOptimizer?
     var fLoopTask: Task<Void, Never>?
+    /// Debounces point-count-driven rebuilds (see scheduleRebuild()).
+    var fRebuildTask: Task<Void, Never>?
     /// Goal image the optimizer converges toward; nil → synthetic disk stand-in.
     /// Internal (not private) so TgoddardModel+FileIO can read/embed it.
     var fGoalImage: CGImage?
+
+    /// Seeded points that fell OUTSIDE the goal region — excluded from the
+    /// optimizer, held here frozen and display-only. Drawn alongside the optimized
+    /// points (the render bridge combines both). Set at build; pulled each frame.
+    var fNonGoalPoints: [NonGoalPoint] = []
 
     // MARK: - Goal image
 
@@ -125,7 +150,9 @@ final class TgoddardModel: ObservableObject, UndoableStore {
         guard let goal = fGoalImage else { fGoalThumbnail = nil; return }
         let frame = OptimizationFrame(outputWidth: fOutputWidth, outputHeight: fOutputHeight, longSide: 256)
         if let t = goalTarget(from: goal, width: frame.width, height: frame.height,
-                              adjustments: currentGoalAdjustments()) {
+                              adjustments: currentGoalAdjustments(),
+                              center: CGPoint(x: Double(fGoalCenterX), y: Double(fGoalCenterY)),
+                              scale: CGFloat(fGoalScale)) {
             fGoalThumbnail = cgImage(fromMLX: t)
         }
     }

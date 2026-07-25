@@ -42,13 +42,26 @@ final class TmetalViewModel {
                       gamma: model.fOutGamma)
     }
 
-    /// Current splats for the renderer to pull each frame.
+    /// Current splats for the renderer to pull each frame — the optimized (goal)
+    /// points from the optimizer snapshot PLUS the frozen non-goal points, so every
+    /// point is drawn even though only the goal subset is in the optimizer.
     func currentSplats() -> [SplatInstance] {
-        guard let s = model.renderData() else { return [] }
-        var out = [SplatInstance](); out.reserveCapacity(s.points.count)
-        for i in 0..<s.points.count {
-            let v = i < s.values.count ? s.values[i] : 1
-            out.append(SplatInstance(position: s.points[i], size: SIMD2(s.radius, s.radius), value: v))
+        let radius = model.fDisplayRadius
+        let nonGoal = model.fNonGoalPoints
+        var out = [SplatInstance]()
+
+        if let s = model.renderData() {
+            out.reserveCapacity(s.points.count + nonGoal.count)
+            for i in 0..<s.points.count {
+                let v = i < s.values.count ? s.values[i] : 1
+                out.append(SplatInstance(position: s.points[i], size: SIMD2(s.radius, s.radius), value: v))
+            }
+        } else {
+            out.reserveCapacity(nonGoal.count)
+        }
+
+        for p in nonGoal {
+            out.append(SplatInstance(position: p.position, size: SIMD2(radius, radius), value: p.value))
         }
         return out
     }

@@ -10,9 +10,11 @@ import SwiftUI
 import AppKit
 import UniformTypeIdentifiers
 import SameEyesUIKit
+import SameEyesOptimizerKit   // PointLayout
 
 struct ParameterPanelView: View {
     @EnvironmentObject var fModel: TgoddardModel
+    @EnvironmentObject var fEditor: TgoddardEditorState
     @Environment(\.undoManager) private var undoManager
 
     @State private var showRun       = true
@@ -38,6 +40,7 @@ struct ParameterPanelView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack {
                             Button(fModel.fRunning ? "Pause" : "Run") {
+                                if !fModel.fRunning { fEditor.editingGoalPlacement = false }  // starting
                                 fModel.toggleRun()
                             }
                             Button("Reset") {
@@ -65,6 +68,9 @@ struct ParameterPanelView: View {
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
+
+                        // Placement is edited via the interactive overlay on the canvas.
+                        Toggle("Edit placement", isOn: $fEditor.editingGoalPlacement)
 
                         Toggle("Invert", isOn: Binding(
                             get: { fModel.fGoalInvert },
@@ -116,6 +122,15 @@ struct ParameterPanelView: View {
                         FloatSliderRow(title: "Dot radius", store: fModel, undoKeyPath: \.fOptimizerDotRadius,
                                        value: $fModel.fOptimizerDotRadius, range: 0.001...0.2,
                                        fractionDigits: 4, actionName: "Change dot radius")
+                        Picker("", selection: Binding(
+                            get: { fModel.fInvertRender },
+                            set: { fModel.setValue(\.fInvertRender, to: $0,
+                                                   named: "Change polarity", using: undoManager) })) {
+                            Text("White on black").tag(false)
+                            Text("Black on white").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .labelsHidden()
                         Text("Applied on Reset")
                             .font(.caption)
                             .foregroundStyle(.secondary)
@@ -140,18 +155,18 @@ struct ParameterPanelView: View {
 
                 SectionBox("Setup", isExpanded: $showSetup) {
                     VStack(spacing: 8) {
-                        IntSliderRow(title: "Points", store: fModel, undoKeyPath: \.fOptimizerPointCount,
+                        IntSliderRow(title: "Num Points", store: fModel, undoKeyPath: \.fOptimizerPointCount,
                                      value: $fModel.fOptimizerPointCount, range: 1...20000,
-                                     actionName: "Change point count")
-                        IntSliderRow(title: "Optimize px", store: fModel, undoKeyPath: \.fOptimizerLongSide,
+                                     labelWidth: 130, actionName: "Change point count")
+                        IntSliderRow(title: "Optimizer resolution", store: fModel, undoKeyPath: \.fOptimizerLongSide,
                                      value: $fModel.fOptimizerLongSide, range: 32...1024,
-                                     actionName: "Change optimize resolution")
+                                     labelWidth: 130, actionName: "Change optimizer resolution")
                         Picker("", selection: Binding(
-                            get: { fModel.fInvertRender },
-                            set: { fModel.setValue(\.fInvertRender, to: $0,
-                                                   named: "Change polarity", using: undoManager) })) {
-                            Text("White on black").tag(false)
-                            Text("Black on white").tag(true)
+                            get: { fModel.fPointLayout },
+                            set: { fModel.setValue(\.fPointLayout, to: $0,
+                                                   named: "Change point layout", using: undoManager) })) {
+                            Text("Random").tag(PointLayout.random)
+                            Text("Grid").tag(PointLayout.grid)
                         }
                         .pickerStyle(.segmented)
                         .labelsHidden()
@@ -238,6 +253,7 @@ struct ParameterPanelView: View {
                       allowsMultipleSelection: false) { result in
             if case .success(let urls) = result, let url = urls.first {
                 fModel.loadGoalImage(url: url)
+                fEditor.editingGoalPlacement = true   // jump straight into placing it
             }
         }
     }

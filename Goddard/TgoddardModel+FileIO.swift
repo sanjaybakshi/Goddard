@@ -42,6 +42,7 @@ extension TgoddardModel {
                               optimizerPointCount: fOptimizerPointCount,
                               optimizerDotRadius: fOptimizerDotRadius,
                               invertRender: fInvertRender,
+                              pointLayout: fPointLayout.rawValue,
                               outputWidth: fOutputWidth, outputHeight: fOutputHeight,
                               displayRadius: fDisplayRadius, falloffPower: fFalloffPower,
                               backgroundColor: fBackgroundColor, dotColor: fDotColor,
@@ -52,6 +53,7 @@ extension TgoddardModel {
                               goalBlackPoint: fGoalBlackPoint, goalWhitePoint: fGoalWhitePoint,
                               goalBrightness: fGoalBrightness, goalContrast: fGoalContrast,
                               goalGamma: fGoalGamma,
+                              goalCenterX: fGoalCenterX, goalCenterY: fGoalCenterY, goalScale: fGoalScale,
                               goalImagePNG: png)
     }
 
@@ -62,6 +64,7 @@ extension TgoddardModel {
         fOptimizerPointCount = p.optimizerPointCount
         fOptimizerDotRadius = p.optimizerDotRadius
         fInvertRender = p.invertRender
+        fPointLayout = PointLayout(rawValue: p.pointLayout) ?? .random
         fOutputWidth = p.outputWidth; fOutputHeight = p.outputHeight
         fDisplayRadius = p.displayRadius; fFalloffPower = p.falloffPower
         fBackgroundColor = p.backgroundColor; fDotColor = p.dotColor
@@ -73,6 +76,7 @@ extension TgoddardModel {
         fGoalBlackPoint = p.goalBlackPoint; fGoalWhitePoint = p.goalWhitePoint
         fGoalBrightness = p.goalBrightness; fGoalContrast = p.goalContrast
         fGoalGamma = p.goalGamma
+        fGoalCenterX = p.goalCenterX; fGoalCenterY = p.goalCenterY; fGoalScale = p.goalScale
 
         // Goal image is embedded in the project — decode it (or nil → disk).
         fGoalImage = p.goalImagePNG.flatMap { cgImage(fromData: $0) }

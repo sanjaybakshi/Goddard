@@ -22,6 +22,7 @@ extension TgoddardModel {
     /// (aspect-fit + grayscale + adjustments), else a stand-in bright disk on black.
     /// Stops any running loop first.
     func buildOptimizer() {
+        fRebuildTask?.cancel()   // an explicit build supersedes any pending debounced one
         stop()
 
         let n = max(1, fOptimizerPointCount)
@@ -37,7 +38,9 @@ extension TgoddardModel {
         // else a stand-in bright centered disk on black.
         let targetMLX: MLXArray
         if let goal = fGoalImage,
-           let t = goalTarget(from: goal, width: W, height: H, adjustments: currentGoalAdjustments()) {
+           let t = goalTarget(from: goal, width: W, height: H, adjustments: currentGoalAdjustments(),
+                              center: CGPoint(x: Double(fGoalCenterX), y: Double(fGoalCenterY)),
+                              scale: CGFloat(fGoalScale)) {
             targetMLX = t
         } else {
             var target = [Float](repeating: 0, count: H * W)
@@ -52,21 +55,47 @@ extension TgoddardModel {
             targetMLX = MLXArray(target).reshaped([1, 1, H, W])
         }
 
-        // Seed dots uniformly in [0,1]² — fills the aspect-matched frame correctly.
-        var pts = [Float](); pts.reserveCapacity(n * 2)
-        for _ in 0..<n {
-            pts.append(.random(in: 0...1))
-            pts.append(.random(in: 0...1))
+        // The goal's placed rect in normalized [0,1]² — the region whose points are
+        // optimized. Only when a goal is loaded (the stand-in disk fills the frame).
+        var goalRect: CGRect? = nil
+        if let goal = fGoalImage {
+            let ga = CGFloat(goal.width) / CGFloat(max(1, goal.height))
+            let pr = placedRect(contentAspect: ga, frameSize: CGSize(width: W, height: H),
+                                center: CGPoint(x: Double(fGoalCenterX), y: Double(fGoalCenterY)),
+                                scale: CGFloat(fGoalScale))
+            goalRect = CGRect(x: pr.minX / CGFloat(W), y: pr.minY / CGFloat(H),
+                              width: pr.width / CGFloat(W), height: pr.height / CGFloat(H))
         }
-        let ptsMLX = MLXArray(pts).reshaped([n, 2])
+
+        // Seed points per the chosen layout, then split by the goal region: points
+        // inside go to the optimizer ("goal points"); the rest are frozen, display-only
+        // (fNonGoalPoints). The optimizer only sees the subset — the major perf win.
+        let seed = frame.seedPoints(count: n, layout: fPointLayout)
+        var goalPts = [Float](); goalPts.reserveCapacity(seed.count)
+        var nonGoal = [NonGoalPoint]()
+        var si = 0
+        while si < seed.count {
+            let x = seed[si], y = seed[si + 1]; si += 2
+            if let r = goalRect, !r.contains(CGPoint(x: Double(x), y: Double(y))) {
+                nonGoal.append(NonGoalPoint(position: SIMD2(x, y), value: 0.8))
+            } else {
+                goalPts.append(x); goalPts.append(y)
+            }
+        }
+        // Degenerate config (nothing landed in the region) → don't split; optimize all.
+        if goalPts.isEmpty { goalPts = seed; nonGoal = [] }
+        fNonGoalPoints = nonGoal
+
+        let goalCount = goalPts.count / 2
+        let ptsMLX = MLXArray(goalPts).reshaped([goalCount, 2])
 
         // Per-axis sizes so dots render round on the non-square grid.
         let (sw, sh) = frame.normalizedSize(radiusFraction: Double(fOptimizerDotRadius))
-        var sizesArr = [Float](); sizesArr.reserveCapacity(n * 2)
-        for _ in 0..<n { sizesArr.append(sw); sizesArr.append(sh) }
-        let sizesMLX = MLXArray(sizesArr).reshaped([n, 2])
+        var sizesArr = [Float](); sizesArr.reserveCapacity(goalCount * 2)
+        for _ in 0..<goalCount { sizesArr.append(sw); sizesArr.append(sh) }
+        let sizesMLX = MLXArray(sizesArr).reshaped([goalCount, 2])
 
-        let valsMLX = MLXArray([Float](repeating: 0.8, count: n))
+        let valsMLX = MLXArray([Float](repeating: 0.8, count: goalCount))
 
         var cfg = PointsOptimizer.OptimizerConfig()
         cfg.lrPos = fLrPos
@@ -81,9 +110,25 @@ extension TgoddardModel {
         let opt = PointsOptimizer(config: cfg, rendererConfig: rcfg,
                                   initialPtSize: sizesMLX, target: targetMLX)
         opt.fpm = PointsModel(points: ptsMLX, ptSize: sizesMLX, ptValues: valsMLX)
+
         fOptimizer = opt
 
         fTelemetry.loss = 0
+        fTelemetry.totalPoints = n
+        fTelemetry.optimizedPoints = goalCount
+    }
+
+    /// Point count changed — restart the optimizer. Stops the loop immediately,
+    /// then coalesces rapid slider changes into a single rebuild ~150 ms after the
+    /// last adjustment (a full reseed at the new count; no optimization continuity).
+    func scheduleRebuild() {
+        stop()
+        fRebuildTask?.cancel()
+        fRebuildTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard let self, !Task.isCancelled else { return }
+            self.buildOptimizer()
+        }
     }
 
     // MARK: - Run control

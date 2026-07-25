@@ -19,6 +19,7 @@ struct RunReadout: View {
             Text(telemetry.stepsPerSecond > 0
                  ? String(format: "%.0f steps/sec", telemetry.stepsPerSecond)
                  : "— steps/sec")
+            Text("\(telemetry.optimizedPoints) / \(telemetry.totalPoints) optimized")
         }
         .font(.system(.callout, design: .monospaced))
         .foregroundStyle(.secondary)

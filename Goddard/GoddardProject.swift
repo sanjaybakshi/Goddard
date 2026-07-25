@@ -10,6 +10,7 @@
 //
 
 import Foundation
+import SameEyesOptimizerKit   // PointLayout
 
 struct GoddardProject: Codable {
     var schemaVersion: Int
@@ -24,6 +25,7 @@ struct GoddardProject: Codable {
     var optimizerPointCount: Int
     var optimizerDotRadius: Float
     var invertRender: Bool
+    var pointLayout: String   // PointLayout raw value
 
     var outputWidth: Int
     var outputHeight: Int
@@ -50,24 +52,30 @@ struct GoddardProject: Codable {
     var goalContrast: Float
     var goalGamma: Float
 
+    // Goal placement (normalized center + scale in the frame).
+    var goalCenterX: Float
+    var goalCenterY: Float
+    var goalScale: Float
+
     /// The goal image, embedded as PNG (downscaled). nil if no goal was set.
     /// Codable encodes Data as base64 in JSON — self-contained, no file reference.
     var goalImagePNG: Data?
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion, lrPos, lrValue, lrSize, maxMotion, overlapWeight
-        case optimizerLongSide, optimizerPointCount, optimizerDotRadius, invertRender
+        case optimizerLongSide, optimizerPointCount, optimizerDotRadius, invertRender, pointLayout
         case outputWidth, outputHeight, displayRadius, falloffPower
         case backgroundColor, dotColor
         case outBlackPoint, outWhitePoint, outBrightness, outContrast, outGamma
         case goalInvert, goalBlur, goalBlackPoint, goalWhitePoint
-        case goalBrightness, goalContrast, goalGamma, goalImagePNG
+        case goalBrightness, goalContrast, goalGamma
+        case goalCenterX, goalCenterY, goalScale, goalImagePNG
     }
 
     init(schemaVersion: Int = 1,
          lrPos: Float, lrValue: Float, lrSize: Float, maxMotion: Float, overlapWeight: Float,
          optimizerLongSide: Int, optimizerPointCount: Int, optimizerDotRadius: Float,
-         invertRender: Bool,
+         invertRender: Bool, pointLayout: String,
          outputWidth: Int, outputHeight: Int,
          displayRadius: Float, falloffPower: Float,
          backgroundColor: SIMD3<Float>, dotColor: SIMD3<Float>,
@@ -75,6 +83,7 @@ struct GoddardProject: Codable {
          outContrast: Float, outGamma: Float,
          goalInvert: Bool, goalBlur: Float, goalBlackPoint: Float, goalWhitePoint: Float,
          goalBrightness: Float, goalContrast: Float, goalGamma: Float,
+         goalCenterX: Float, goalCenterY: Float, goalScale: Float,
          goalImagePNG: Data?) {
         self.schemaVersion = schemaVersion
         self.lrPos = lrPos; self.lrValue = lrValue; self.lrSize = lrSize
@@ -83,6 +92,7 @@ struct GoddardProject: Codable {
         self.optimizerPointCount = optimizerPointCount
         self.optimizerDotRadius = optimizerDotRadius
         self.invertRender = invertRender
+        self.pointLayout = pointLayout
         self.outputWidth = outputWidth; self.outputHeight = outputHeight
         self.displayRadius = displayRadius; self.falloffPower = falloffPower
         self.backgroundColor = backgroundColor; self.dotColor = dotColor
@@ -93,6 +103,7 @@ struct GoddardProject: Codable {
         self.goalBlackPoint = goalBlackPoint; self.goalWhitePoint = goalWhitePoint
         self.goalBrightness = goalBrightness; self.goalContrast = goalContrast
         self.goalGamma = goalGamma
+        self.goalCenterX = goalCenterX; self.goalCenterY = goalCenterY; self.goalScale = goalScale
         self.goalImagePNG = goalImagePNG
     }
 
@@ -110,6 +121,7 @@ struct GoddardProject: Codable {
         optimizerPointCount = try c.decodeIfPresent(Int.self,   forKey: .optimizerPointCount) ?? 10000
         optimizerDotRadius  = try c.decodeIfPresent(Float.self, forKey: .optimizerDotRadius) ?? 0.005
         invertRender        = try c.decodeIfPresent(Bool.self,  forKey: .invertRender) ?? false
+        pointLayout         = try c.decodeIfPresent(String.self, forKey: .pointLayout) ?? PointLayout.random.rawValue
         outputWidth         = try c.decodeIfPresent(Int.self,   forKey: .outputWidth) ?? 1280
         outputHeight        = try c.decodeIfPresent(Int.self,   forKey: .outputHeight) ?? 720
         displayRadius       = try c.decodeIfPresent(Float.self, forKey: .displayRadius) ?? 0.005
@@ -128,6 +140,9 @@ struct GoddardProject: Codable {
         goalBrightness      = try c.decodeIfPresent(Float.self, forKey: .goalBrightness) ?? 0
         goalContrast        = try c.decodeIfPresent(Float.self, forKey: .goalContrast) ?? 1
         goalGamma           = try c.decodeIfPresent(Float.self, forKey: .goalGamma) ?? 1
+        goalCenterX         = try c.decodeIfPresent(Float.self, forKey: .goalCenterX) ?? 0.5
+        goalCenterY         = try c.decodeIfPresent(Float.self, forKey: .goalCenterY) ?? 0.5
+        goalScale           = try c.decodeIfPresent(Float.self, forKey: .goalScale) ?? 1
         goalImagePNG        = try c.decodeIfPresent(Data.self,  forKey: .goalImagePNG)
     }
 
