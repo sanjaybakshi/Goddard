@@ -18,9 +18,10 @@ import MLX
 import SameEyesOptimizerKit
 import SameEyesUIKit
 
-/// A point excluded from the optimizer (outside the goal region): frozen,
-/// display-only. Position is normalized [0,1]²; value is its splat brightness.
-struct NonGoalPoint {
+/// A point excluded from the optimizer (not under the goal image): frozen,
+/// display-only. Position is normalized [0,1]² — and, since it never moves, also its
+/// source UV in textured display. `value` is its splat brightness.
+struct ExcludedPoint {
     var position: SIMD2<Float>
     var value: Float
 }
@@ -69,6 +70,11 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     // the canvas clear color; dot color tints the splats. rgb in [0,1].
     @Published var fBackgroundColor: SIMD3<Float> = SIMD3(0.06, 0.06, 0.07)
     @Published var fDotColor:        SIMD3<Float> = SIMD3(1, 1, 1)
+
+    /// Display mode: draw points as source-image fragments (textured) instead of flat
+    /// splats. Off by default; needs a source image. Display-only; persisted. When on,
+    /// dot color + flatness are inert; background color + output grade still apply.
+    @Published var fTextured: Bool = false
 
     // Output grade — a tonal curve on the final composited frame (a renderer
     // post-process). Live; never touches the optimizer. Identity = no change.
@@ -124,10 +130,14 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     /// Small unprocessed display copy of the source, for the panel.
     @Published private(set) var fSourceThumbnail: CGImage? = nil
 
-    /// Seeded points that fell OUTSIDE the goal region — excluded from the
-    /// optimizer, held here frozen and display-only. Drawn alongside the optimized
-    /// points (the render bridge combines both). Set at build; pulled each frame.
-    var fNonGoalPoints: [NonGoalPoint] = []
+    /// Seeded points that fell outside the goal image — excluded from the optimizer,
+    /// held here frozen and display-only. Drawn alongside the optimized points (the
+    /// render bridge combines both). Set at build; pulled each frame.
+    var fExcludedPoints: [ExcludedPoint] = []
+    /// Frozen initial positions = source UVs of the optimized points, index-aligned to
+    /// the optimizer's points. The optimized points move; their UV stays here. Used
+    /// only in textured display (an excluded point's UV is just its position).
+    var fOptimizedUVs: [SIMD2<Float>] = []
 
     // MARK: - Goal image
 

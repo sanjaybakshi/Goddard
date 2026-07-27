@@ -47,20 +47,20 @@ final class TmetalViewModel {
     /// point is drawn even though only the goal subset is in the optimizer.
     func currentSplats() -> [SplatInstance] {
         let radius = model.fDisplayRadius
-        let nonGoal = model.fNonGoalPoints
+        let excluded = model.fExcludedPoints
         var out = [SplatInstance]()
 
         if let s = model.renderData() {
-            out.reserveCapacity(s.points.count + nonGoal.count)
+            out.reserveCapacity(s.points.count + excluded.count)
             for i in 0..<s.points.count {
                 let v = i < s.values.count ? s.values[i] : 1
                 out.append(SplatInstance(position: s.points[i], size: SIMD2(s.radius, s.radius), value: v))
             }
         } else {
-            out.reserveCapacity(nonGoal.count)
+            out.reserveCapacity(excluded.count)
         }
 
-        for p in nonGoal {
+        for p in excluded {
             out.append(SplatInstance(position: p.position, size: SIMD2(radius, radius), value: p.value))
         }
         return out

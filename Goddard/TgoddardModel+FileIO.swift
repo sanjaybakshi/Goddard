@@ -53,6 +53,7 @@ extension TgoddardModel {
                               pointLayout: fPointLayout.rawValue,
                               outputWidth: fOutputWidth, outputHeight: fOutputHeight,
                               displayRadius: fDisplayRadius, falloffPower: fFalloffPower,
+                              textured: fTextured,
                               backgroundColor: fBackgroundColor, dotColor: fDotColor,
                               outBlackPoint: fOutBlackPoint, outWhitePoint: fOutWhitePoint,
                               outBrightness: fOutBrightness, outContrast: fOutContrast,
@@ -75,6 +76,7 @@ extension TgoddardModel {
         fPointLayout = PointLayout(rawValue: p.pointLayout) ?? .random
         fOutputWidth = p.outputWidth; fOutputHeight = p.outputHeight
         fDisplayRadius = p.displayRadius; fFalloffPower = p.falloffPower
+        fTextured = p.textured
         fBackgroundColor = p.backgroundColor; fDotColor = p.dotColor
         fOutBlackPoint = p.outBlackPoint; fOutWhitePoint = p.outWhitePoint
         fOutBrightness = p.outBrightness; fOutContrast = p.outContrast
@@ -87,7 +89,7 @@ extension TgoddardModel {
         fGoalCenterX = p.goalCenterX; fGoalCenterY = p.goalCenterY; fGoalScale = p.goalScale
 
         // Goal + source images are embedded in the project — decode them.
-        fGoalImage = p.goalImagePNG.flatMap { cgImage(fromData: $0) }
+x        fGoalImage = p.goalImagePNG.flatMap { cgImage(fromData: $0) }
         fSourceImage = p.sourceImagePNG.flatMap { cgImage(fromData: $0) }
 
         refreshGoalThumbnail()

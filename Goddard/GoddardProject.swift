@@ -33,6 +33,7 @@ struct GoddardProject: Codable {
     // Renderer (display-only).
     var displayRadius: Float
     var falloffPower: Float
+    var textured: Bool
     var backgroundColor: SIMD3<Float>
     var dotColor: SIMD3<Float>
 
@@ -66,7 +67,7 @@ struct GoddardProject: Codable {
     enum CodingKeys: String, CodingKey {
         case schemaVersion, lrPos, lrValue, lrSize, maxMotion, overlapWeight
         case optimizerLongSide, optimizerPointCount, optimizerDotRadius, invertRender, pointLayout
-        case outputWidth, outputHeight, displayRadius, falloffPower
+        case outputWidth, outputHeight, displayRadius, falloffPower, textured
         case backgroundColor, dotColor
         case outBlackPoint, outWhitePoint, outBrightness, outContrast, outGamma
         case goalInvert, goalBlur, goalBlackPoint, goalWhitePoint
@@ -79,7 +80,7 @@ struct GoddardProject: Codable {
          optimizerLongSide: Int, optimizerPointCount: Int, optimizerDotRadius: Float,
          invertRender: Bool, pointLayout: String,
          outputWidth: Int, outputHeight: Int,
-         displayRadius: Float, falloffPower: Float,
+         displayRadius: Float, falloffPower: Float, textured: Bool,
          backgroundColor: SIMD3<Float>, dotColor: SIMD3<Float>,
          outBlackPoint: Float, outWhitePoint: Float, outBrightness: Float,
          outContrast: Float, outGamma: Float,
@@ -97,6 +98,7 @@ struct GoddardProject: Codable {
         self.pointLayout = pointLayout
         self.outputWidth = outputWidth; self.outputHeight = outputHeight
         self.displayRadius = displayRadius; self.falloffPower = falloffPower
+        self.textured = textured
         self.backgroundColor = backgroundColor; self.dotColor = dotColor
         self.outBlackPoint = outBlackPoint; self.outWhitePoint = outWhitePoint
         self.outBrightness = outBrightness; self.outContrast = outContrast
@@ -129,6 +131,7 @@ struct GoddardProject: Codable {
         outputHeight        = try c.decodeIfPresent(Int.self,   forKey: .outputHeight) ?? 720
         displayRadius       = try c.decodeIfPresent(Float.self, forKey: .displayRadius) ?? 0.005
         falloffPower        = try c.decodeIfPresent(Float.self, forKey: .falloffPower) ?? 4
+        textured            = try c.decodeIfPresent(Bool.self,  forKey: .textured) ?? false
         backgroundColor     = try c.decodeIfPresent(SIMD3<Float>.self, forKey: .backgroundColor) ?? SIMD3(0.06, 0.06, 0.07)
         dotColor            = try c.decodeIfPresent(SIMD3<Float>.self, forKey: .dotColor) ?? SIMD3(1, 1, 1)
         outBlackPoint       = try c.decodeIfPresent(Float.self, forKey: .outBlackPoint) ?? 0

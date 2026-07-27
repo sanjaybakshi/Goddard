@@ -69,22 +69,29 @@ extension TgoddardModel {
 
         // Seed points per the chosen layout, then split by the goal region: points
         // inside go to the optimizer ("goal points"); the rest are frozen, display-only
-        // (fNonGoalPoints). The optimizer only sees the subset — the major perf win.
+        // (fExcludedPoints). The optimizer only sees the subset — the major perf win.
         let seed = frame.seedPoints(count: n, layout: fPointLayout)
         var goalPts = [Float](); goalPts.reserveCapacity(seed.count)
-        var nonGoal = [NonGoalPoint]()
+        var excluded = [ExcludedPoint]()
+        var optimizedUVs = [SIMD2<Float>]()
         var si = 0
         while si < seed.count {
             let x = seed[si], y = seed[si + 1]; si += 2
             if let r = goalRect, !r.contains(CGPoint(x: Double(x), y: Double(y))) {
-                nonGoal.append(NonGoalPoint(position: SIMD2(x, y), value: 0.8))
+                excluded.append(ExcludedPoint(position: SIMD2(x, y), value: 0.8))
             } else {
                 goalPts.append(x); goalPts.append(y)
+                optimizedUVs.append(SIMD2(x, y))   // frozen source UV = init position
             }
         }
         // Degenerate config (nothing landed in the region) → don't split; optimize all.
-        if goalPts.isEmpty { goalPts = seed; nonGoal = [] }
-        fNonGoalPoints = nonGoal
+        if goalPts.isEmpty {
+            goalPts = seed
+            excluded = []
+            optimizedUVs = stride(from: 0, to: seed.count, by: 2).map { SIMD2(seed[$0], seed[$0 + 1]) }
+        }
+        fExcludedPoints = excluded
+        fOptimizedUVs = optimizedUVs
 
         let goalCount = goalPts.count / 2
         let ptsMLX = MLXArray(goalPts).reshaped([goalCount, 2])
