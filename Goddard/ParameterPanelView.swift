@@ -221,6 +221,16 @@ struct ParameterPanelView: View {
 
                 SectionBox("Renderer", isExpanded: $showRenderer) {
                     VStack(spacing: 8) {
+                        Toggle("Textured", isOn: Binding(
+                            get: { fModel.fTextured },
+                            set: { fModel.setValue(\.fTextured, to: $0,
+                                                   named: "Toggle textured", using: undoManager) }))
+                        Text("Textured needs a source image; dot color + flatness don't apply.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Divider()
+
                         IntSliderRow(title: "Output W", store: fModel, undoKeyPath: \.fOutputWidth,
                                      value: $fModel.fOutputWidth, range: 64...8192,
                                      actionName: "Change output width")

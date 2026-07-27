@@ -148,7 +148,9 @@ final class TgoddardModel: ObservableObject, UndoableStore {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let img = loadCGImage(from: url) else { return }
-        fGoalImage = img
+        // Detach from the file NOW (scope is open) so later re-rasterization (Reset)
+        // doesn't re-read the file after access has ended.
+        fGoalImage = detachedCopy(img) ?? img
         refreshGoalThumbnail()
         buildOptimizer()
     }
@@ -160,10 +162,13 @@ final class TgoddardModel: ObservableObject, UndoableStore {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
         guard let img = loadCGImage(from: url) else { return }
-        fSourceImage = img
+        // Detach from the file NOW (scope is open) so the texture upload during draw
+        // — which happens after access has ended — reads memory, not the file (EPERM).
+        let baked = detachedCopy(img) ?? img
+        fSourceImage = baked
         refreshSourceThumbnail()
-        fOutputWidth = img.width
-        fOutputHeight = img.height
+        fOutputWidth = baked.width
+        fOutputHeight = baked.height
         buildOptimizer()
     }
 

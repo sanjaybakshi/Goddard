@@ -10,6 +10,7 @@
 
 import simd
 import Metal
+import CoreGraphics
 import SameEyesMetalKit
 
 final class TmetalViewModel {
@@ -64,5 +65,48 @@ final class TmetalViewModel {
             out.append(SplatInstance(position: p.position, size: SIMD2(radius, radius), value: p.value))
         }
         return out
+    }
+
+    /// The source image the canvas uploads as a texture (passthrough; the canvas owns
+    /// the MTLTexture since it owns the device).
+    var sourceImage: CGImage? { model.fSourceImage }
+
+    /// The draw batch for this frame: textured quads when textured mode is on and a
+    /// source is loaded; otherwise flat splats.
+    func currentBatch() -> PrimitiveBatch {
+        guard model.fTextured, model.fSourceImage != nil else {
+            return .splats(currentSplats())
+        }
+        return .texturedSplats(currentTexturedSplats())
+    }
+
+    /// Textured instances: optimized points carry their frozen source UV (fOptimizedUVs)
+    /// as they move; excluded points sample the source where they sit (uvCenter = position).
+    private func currentTexturedSplats() -> [TexturedSplatInstance] {
+        let size = SIMD2<Float>(model.fDisplayRadius, model.fDisplayRadius)
+        let uvs = model.fOptimizedUVs
+        var out = [TexturedSplatInstance]()
+
+        if let s = model.renderData() {
+            out.reserveCapacity(s.points.count + model.fExcludedPoints.count)
+            for i in 0..<s.points.count {
+                let uv = i < uvs.count ? uvs[i] : s.points[i]
+                out.append(TexturedSplatInstance(position: s.points[i], size: size, uvCenter: uv))
+            }
+        }
+        for p in model.fExcludedPoints {
+            out.append(TexturedSplatInstance(position: p.position, size: size, uvCenter: p.position))
+        }
+        return out
+    }
+
+    /// Source-UV patch half-extent for textured mode — matches the on-screen dot
+    /// footprint (decision 1a). `fDisplayRadius` is a fraction of the short side;
+    /// convert to per-axis UV using the frame aspect so patches tile at grid init.
+    func uvHalf() -> SIMD2<Float> {
+        let w = Float(max(1, model.fOutputWidth)), h = Float(max(1, model.fOutputHeight))
+        let short = min(w, h)
+        let r = model.fDisplayRadius
+        return SIMD2(r * short / w, r * short / h)
     }
 }

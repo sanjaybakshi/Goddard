@@ -89,7 +89,7 @@ extension TgoddardModel {
         fGoalCenterX = p.goalCenterX; fGoalCenterY = p.goalCenterY; fGoalScale = p.goalScale
 
         // Goal + source images are embedded in the project — decode them.
-x        fGoalImage = p.goalImagePNG.flatMap { cgImage(fromData: $0) }
+        fGoalImage = p.goalImagePNG.flatMap { cgImage(fromData: $0) }
         fSourceImage = p.sourceImagePNG.flatMap { cgImage(fromData: $0) }
 
         refreshGoalThumbnail()

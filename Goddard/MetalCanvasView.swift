@@ -43,6 +43,9 @@ struct MetalCanvasView: NSViewRepresentable {
         var metal: TmetalViewModel
         private let queue: MTLCommandQueue?
         private var renderer: MetalRenderer?
+        /// Cached source texture + the CGImage it was built from (rebuilt on change).
+        private var sourceTexture: MTLTexture?
+        private var sourceImageRef: CGImage?
 
         init(metal: TmetalViewModel) {
             self.metal = metal
@@ -65,16 +68,31 @@ struct MetalCanvasView: NSViewRepresentable {
                   let cmd = queue.makeCommandBuffer()
             else { return }
 
-            let splats = metal.currentSplats()              // pulled each tick
+            updateSourceTexture()                            // rebuild only if the source changed
             let viewport = SIMD2(Float(view.drawableSize.width), Float(view.drawableSize.height))
-            renderer.render([.splats(splats)],
+            renderer.render([metal.currentBatch()],          // splats or textured, pulled each tick
                             uniforms: metal.renderUniforms(viewport: viewport),
                             grade: metal.gradeUniforms(),
                             clearColor: metal.backgroundClearColor(),
                             drawable: drawable.texture,
+                            sourceTexture: sourceTexture,
+                            uvHalf: metal.uvHalf(),
                             commandBuffer: cmd)
             cmd.present(drawable)
             cmd.commit()
+        }
+
+        /// Upload the source image to a texture, rebuilding only when it changes.
+        private func updateSourceTexture() {
+            let src = metal.sourceImage
+            if src === sourceImageRef { return }
+            sourceImageRef = src
+            guard let src, let device else { sourceTexture = nil; return }
+            let loader = MTKTextureLoader(device: device)
+            sourceTexture = try? loader.newTexture(cgImage: src, options: [
+                .origin: MTKTextureLoader.Origin.topLeft,
+                .SRGB: false
+            ])
         }
     }
 }
