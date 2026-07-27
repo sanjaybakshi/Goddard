@@ -118,6 +118,12 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     /// Internal (not private) so TgoddardModel+FileIO can read/embed it.
     var fGoalImage: CGImage?
 
+    /// Source image — defines the frame (writes Output W/H on load) and, later, the
+    /// texture each point samples. Internal so TgoddardModel+FileIO can read/embed it.
+    var fSourceImage: CGImage?
+    /// Small unprocessed display copy of the source, for the panel.
+    @Published private(set) var fSourceThumbnail: CGImage? = nil
+
     /// Seeded points that fell OUTSIDE the goal region — excluded from the
     /// optimizer, held here frozen and display-only. Drawn alongside the optimized
     /// points (the render bridge combines both). Set at build; pulled each frame.
@@ -135,6 +141,25 @@ final class TgoddardModel: ObservableObject, UndoableStore {
         fGoalImage = img
         refreshGoalThumbnail()
         buildOptimizer()
+    }
+
+    /// Load a source image: it defines the frame — writes Output W/H = its pixel dims
+    /// (the aspect authority) — and later provides the texture each point samples. A
+    /// saved project embeds a downscaled copy.
+    func loadSourceImage(url: URL) {
+        let scoped = url.startAccessingSecurityScopedResource()
+        defer { if scoped { url.stopAccessingSecurityScopedResource() } }
+        guard let img = loadCGImage(from: url) else { return }
+        fSourceImage = img
+        refreshSourceThumbnail()
+        fOutputWidth = img.width
+        fOutputHeight = img.height
+        buildOptimizer()
+    }
+
+    /// Rebuild the source panel thumbnail (unprocessed) from the current source image.
+    func refreshSourceThumbnail() {
+        fSourceThumbnail = fSourceImage.flatMap { scaledToFit($0, maxDimension: 256) }
     }
 
     /// The current goal adjustments assembled from the model params.

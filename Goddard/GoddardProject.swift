@@ -60,6 +60,8 @@ struct GoddardProject: Codable {
     /// The goal image, embedded as PNG (downscaled). nil if no goal was set.
     /// Codable encodes Data as base64 in JSON — self-contained, no file reference.
     var goalImagePNG: Data?
+    /// The source image, embedded as PNG (downscaled). nil if no source was set.
+    var sourceImagePNG: Data?
 
     enum CodingKeys: String, CodingKey {
         case schemaVersion, lrPos, lrValue, lrSize, maxMotion, overlapWeight
@@ -69,7 +71,7 @@ struct GoddardProject: Codable {
         case outBlackPoint, outWhitePoint, outBrightness, outContrast, outGamma
         case goalInvert, goalBlur, goalBlackPoint, goalWhitePoint
         case goalBrightness, goalContrast, goalGamma
-        case goalCenterX, goalCenterY, goalScale, goalImagePNG
+        case goalCenterX, goalCenterY, goalScale, goalImagePNG, sourceImagePNG
     }
 
     init(schemaVersion: Int = 1,
@@ -84,7 +86,7 @@ struct GoddardProject: Codable {
          goalInvert: Bool, goalBlur: Float, goalBlackPoint: Float, goalWhitePoint: Float,
          goalBrightness: Float, goalContrast: Float, goalGamma: Float,
          goalCenterX: Float, goalCenterY: Float, goalScale: Float,
-         goalImagePNG: Data?) {
+         goalImagePNG: Data?, sourceImagePNG: Data?) {
         self.schemaVersion = schemaVersion
         self.lrPos = lrPos; self.lrValue = lrValue; self.lrSize = lrSize
         self.maxMotion = maxMotion; self.overlapWeight = overlapWeight
@@ -105,6 +107,7 @@ struct GoddardProject: Codable {
         self.goalGamma = goalGamma
         self.goalCenterX = goalCenterX; self.goalCenterY = goalCenterY; self.goalScale = goalScale
         self.goalImagePNG = goalImagePNG
+        self.sourceImagePNG = sourceImagePNG
     }
 
     /// Forward/backward-compatible decode: any missing key defaults, so a file
@@ -144,6 +147,7 @@ struct GoddardProject: Codable {
         goalCenterY         = try c.decodeIfPresent(Float.self, forKey: .goalCenterY) ?? 0.5
         goalScale           = try c.decodeIfPresent(Float.self, forKey: .goalScale) ?? 1
         goalImagePNG        = try c.decodeIfPresent(Data.self,  forKey: .goalImagePNG)
+        sourceImagePNG      = try c.decodeIfPresent(Data.self,  forKey: .sourceImagePNG)
     }
 
     func jsonData() throws -> Data {

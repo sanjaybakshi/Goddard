@@ -17,7 +17,9 @@ struct ParameterPanelView: View {
     @EnvironmentObject var fEditor: TgoddardEditorState
     @Environment(\.undoManager) private var undoManager
 
-    @State private var showRun       = true
+    @State private var showRun         = true
+    @State private var showSourceImage = true
+    @State private var showSourceImporter = false
     @State private var showGoalImage = true
     @State private var showOptimizer = true
     @State private var showDebug     = false
@@ -52,9 +54,49 @@ struct ParameterPanelView: View {
                     .padding(.top, 6)
                 }
 
+                SectionBox("Source Image", isExpanded: $showSourceImage) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Button("Load Source Image…") { showSourceImporter = true }
+                            .fileImporter(isPresented: $showSourceImporter,
+                                          allowedContentTypes: [.image],
+                                          allowsMultipleSelection: false) { result in
+                                if case .success(let urls) = result, let url = urls.first {
+                                    fModel.loadSourceImage(url: url)
+                                }
+                            }
+
+                        if let thumb = fModel.fSourceThumbnail {
+                            Image(decorative: thumb, scale: 1.0)
+                                .resizable()
+                                .interpolation(.high)
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxHeight: 160)
+                                .border(Color.secondary.opacity(0.3))
+                            if let src = fModel.fSourceImage {
+                                Text("\(src.width) × \(src.height) — sets Output W/H")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        } else {
+                            Text("No source image")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .padding(.top, 6)
+                }
+
                 SectionBox("Goal Image", isExpanded: $showGoalImage) {
                     VStack(alignment: .leading, spacing: 10) {
                         Button("Load Goal Image…") { showGoalImporter = true }
+                            .fileImporter(isPresented: $showGoalImporter,
+                                          allowedContentTypes: [.image],
+                                          allowsMultipleSelection: false) { result in
+                                if case .success(let urls) = result, let url = urls.first {
+                                    fModel.loadGoalImage(url: url)
+                                    fEditor.editingGoalPlacement = true   // jump into placing it
+                                }
+                            }
 
                         if let thumb = fModel.fGoalThumbnail {
                             Image(decorative: thumb, scale: 1.0)
@@ -248,14 +290,6 @@ struct ParameterPanelView: View {
         }
         .frame(minWidth: 250, maxWidth: 320)
         .background(.ultraThinMaterial)
-        .fileImporter(isPresented: $showGoalImporter,
-                      allowedContentTypes: [.image],
-                      allowsMultipleSelection: false) { result in
-            if case .success(let urls) = result, let url = urls.first {
-                fModel.loadGoalImage(url: url)
-                fEditor.editingGoalPlacement = true   // jump straight into placing it
-            }
-        }
     }
 
     /// Bridges a model `SIMD3<Float>` rgb color to a SwiftUI `Color` for a

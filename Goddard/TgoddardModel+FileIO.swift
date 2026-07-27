@@ -29,12 +29,20 @@ extension TgoddardModel {
     /// Max stored goal dimension — the goal only needs ~the optimize resolution,
     /// so downscaling keeps the embedded PNG (and the file) small.
     private static let goalImageStoreMax = 1024
+    /// Max stored source dimension — larger than the goal since the source is the
+    /// texture (it wants more detail), but still bounded to keep the file sane.
+    private static let sourceImageStoreMax = 2048
 
     private func makeProject() -> GoddardProject {
         var png: Data?
         if let goal = fGoalImage,
            let small = scaledToFit(goal, maxDimension: Self.goalImageStoreMax) {
             png = pngData(from: small)
+        }
+        var srcPNG: Data?
+        if let src = fSourceImage,
+           let small = scaledToFit(src, maxDimension: Self.sourceImageStoreMax) {
+            srcPNG = pngData(from: small)
         }
         return GoddardProject(lrPos: fLrPos, lrValue: fLrValue, lrSize: fLrSize,
                               maxMotion: fMaxMotion, overlapWeight: fOverlapWeight,
@@ -54,7 +62,7 @@ extension TgoddardModel {
                               goalBrightness: fGoalBrightness, goalContrast: fGoalContrast,
                               goalGamma: fGoalGamma,
                               goalCenterX: fGoalCenterX, goalCenterY: fGoalCenterY, goalScale: fGoalScale,
-                              goalImagePNG: png)
+                              goalImagePNG: png, sourceImagePNG: srcPNG)
     }
 
     private func apply(_ p: GoddardProject) {
@@ -78,10 +86,12 @@ extension TgoddardModel {
         fGoalGamma = p.goalGamma
         fGoalCenterX = p.goalCenterX; fGoalCenterY = p.goalCenterY; fGoalScale = p.goalScale
 
-        // Goal image is embedded in the project — decode it (or nil → disk).
+        // Goal + source images are embedded in the project — decode them.
         fGoalImage = p.goalImagePNG.flatMap { cgImage(fromData: $0) }
+        fSourceImage = p.sourceImagePNG.flatMap { cgImage(fromData: $0) }
 
         refreshGoalThumbnail()
+        refreshSourceThumbnail()
         buildOptimizer()
     }
 }
