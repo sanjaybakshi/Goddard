@@ -2,10 +2,9 @@
 //  TmetalViewModel.swift
 //  Goddard
 //
-//  Render bridge between the model (TgoddardModel) and the Metal canvas. The
-//  canvas PULLS from here each display-link tick (mirrors calligramy's
-//  TmetalViewModel). This is the only Goddard type that knows about SplatInstance;
-//  the model stays render-agnostic.
+//  Render bridge between the model (TgoddardModel) and the Metal canvas. The canvas
+//  PULLS from here each display-link tick. This is the only Goddard type that builds
+//  SameEyesMetalKit QuadInstances; the model stays render-agnostic.
 //
 
 import simd
@@ -20,15 +19,13 @@ final class TmetalViewModel {
         self.model = model
     }
 
-    /// Render uniforms (falloff, dot color) for the current frame — display-only.
-    func renderUniforms(viewport: SIMD2<Float>) -> RenderUniforms {
-        RenderUniforms(viewport: viewport,
-                       falloffPower: model.fFalloffPower,
-                       splatColor: model.fDotColor)
+    // MARK: - Frame-level
+
+    func frameUniforms(viewport: SIMD2<Float>) -> FrameUniforms {
+        FrameUniforms(viewport: viewport)
     }
 
-    /// Canvas clear color for the current frame (the display background). Pulled by
-    /// the canvas each tick so it stays live as the user picks a color.
+    /// Canvas clear color (the display background). Pulled each tick so it stays live.
     func backgroundClearColor() -> MTLClearColor {
         let c = model.fBackgroundColor
         return MTLClearColor(red: Double(c.x), green: Double(c.y), blue: Double(c.z), alpha: 1)
@@ -43,67 +40,64 @@ final class TmetalViewModel {
                       gamma: model.fOutGamma)
     }
 
-    /// Current splats for the renderer to pull each frame — the optimized (goal)
-    /// points from the optimizer snapshot PLUS the frozen non-goal points, so every
-    /// point is drawn even though only the goal subset is in the optimizer.
-    func currentSplats() -> [SplatInstance] {
-        let radius = model.fDisplayRadius
-        let excluded = model.fExcludedPoints
-        var out = [SplatInstance]()
+    /// The source image the canvas uploads as a texture (the canvas owns the MTLTexture).
+    var sourceImage: CGImage? { model.fSourceImage }
 
+    // MARK: - This frame's quad instances
+
+    /// Material + instances + material params. Textured when textured mode is on and a
+    /// source is loaded; otherwise gaussian dots.
+    func currentQuads() -> (material: Material, instances: [QuadInstance], params: SIMD4<Float>) {
+        if model.fTextured, model.fSourceImage != nil {
+            return (.textured, texturedInstances(), .zero)
+        }
+        return (.gaussian, gaussianInstances(), SIMD4(model.fFalloffPower, 0, 0, 0))
+    }
+
+    /// Gaussian dots — optimized points (snapshot) + frozen excluded points. Color rgb =
+    /// dot color; color.a = the point's value (brightness), used as alpha by the material.
+    private func gaussianInstances() -> [QuadInstance] {
+        let size = SIMD2<Float>(model.fDisplayRadius, model.fDisplayRadius)
+        let dc = model.fDotColor
+        var out = [QuadInstance]()
         if let s = model.renderData() {
-            out.reserveCapacity(s.points.count + excluded.count)
+            out.reserveCapacity(s.points.count + model.fExcludedPoints.count)
             for i in 0..<s.points.count {
                 let v = i < s.values.count ? s.values[i] : 1
-                out.append(SplatInstance(position: s.points[i], size: SIMD2(s.radius, s.radius), value: v))
+                out.append(QuadInstance(position: s.points[i], size: size,
+                                        color: SIMD4(dc.x, dc.y, dc.z, v)))
             }
-        } else {
-            out.reserveCapacity(excluded.count)
         }
-
-        for p in excluded {
-            out.append(SplatInstance(position: p.position, size: SIMD2(radius, radius), value: p.value))
+        for p in model.fExcludedPoints {
+            out.append(QuadInstance(position: p.position, size: size,
+                                    color: SIMD4(dc.x, dc.y, dc.z, p.value)))
         }
         return out
     }
 
-    /// The source image the canvas uploads as a texture (passthrough; the canvas owns
-    /// the MTLTexture since it owns the device).
-    var sourceImage: CGImage? { model.fSourceImage }
-
-    /// The draw batch for this frame: textured quads when textured mode is on and a
-    /// source is loaded; otherwise flat splats.
-    func currentBatch() -> PrimitiveBatch {
-        guard model.fTextured, model.fSourceImage != nil else {
-            return .splats(currentSplats())
-        }
-        return .texturedSplats(currentTexturedSplats())
-    }
-
-    /// Textured instances: optimized points carry their frozen source UV (fOptimizedUVs)
-    /// as they move; excluded points sample the source where they sit (uvCenter = position).
-    private func currentTexturedSplats() -> [TexturedSplatInstance] {
+    /// Textured quads — optimized points carry their frozen source UV (fOptimizedUVs) as
+    /// they move; excluded points sample the source where they sit.
+    private func texturedInstances() -> [QuadInstance] {
         let size = SIMD2<Float>(model.fDisplayRadius, model.fDisplayRadius)
+        let uvh = uvHalf()
         let uvs = model.fOptimizedUVs
-        var out = [TexturedSplatInstance]()
-
+        var out = [QuadInstance]()
         if let s = model.renderData() {
             out.reserveCapacity(s.points.count + model.fExcludedPoints.count)
             for i in 0..<s.points.count {
                 let uv = i < uvs.count ? uvs[i] : s.points[i]
-                out.append(TexturedSplatInstance(position: s.points[i], size: size, uvCenter: uv))
+                out.append(QuadInstance(position: s.points[i], size: size, uvCenter: uv, uvHalf: uvh))
             }
         }
         for p in model.fExcludedPoints {
-            out.append(TexturedSplatInstance(position: p.position, size: size, uvCenter: p.position))
+            out.append(QuadInstance(position: p.position, size: size, uvCenter: p.position, uvHalf: uvh))
         }
         return out
     }
 
-    /// Source-UV patch half-extent for textured mode — matches the on-screen dot
-    /// footprint (decision 1a). `fDisplayRadius` is a fraction of the short side;
-    /// convert to per-axis UV using the frame aspect so patches tile at grid init.
-    func uvHalf() -> SIMD2<Float> {
+    /// Source-UV patch half-extent — matches the on-screen dot footprint, aspect-corrected
+    /// (fDisplayRadius is a fraction of the short side).
+    private func uvHalf() -> SIMD2<Float> {
         let w = Float(max(1, model.fOutputWidth)), h = Float(max(1, model.fOutputHeight))
         let short = min(w, h)
         let r = model.fDisplayRadius

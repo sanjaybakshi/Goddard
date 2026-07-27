@@ -4,7 +4,7 @@
 //
 //  The app model: owns the SameEyesOptimizerKit optimizer, its params, and the
 //  goal image. Render-agnostic — it exposes a plain-Swift renderData() and owns a
-//  TmetalViewModel bridge that turns it into SplatInstances for the canvas (so this
+//  TmetalViewModel bridge that turns it into QuadInstances for the canvas (so this
 //  model needs no MetalKit import). Implicitly @MainActor under the target's
 //  MainActor-default isolation. This file holds the class declaration, stored
 //  properties, and the goal-image helpers; the optimizer lifecycle + off-main loop

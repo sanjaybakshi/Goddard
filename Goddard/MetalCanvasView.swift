@@ -2,8 +2,8 @@
 //  MetalCanvasView.swift
 //  Goddard
 //
-//  Hosts an MTKView and draws through SameEyesMetalKit's MetalRenderer. Data is
-//  PULLED each display-link tick: the delegate calls `metal.currentSplats()` in
+//  Hosts an MTKView and draws through SameEyesMetalKit's QuadRenderer. Data is
+//  PULLED each display-link tick: the delegate calls `metal.currentQuads()` in
 //  `draw(in:)` and hands the result to the renderer. No SwiftUI-state-driven
 //  redraws — the display link is the clock (mirrors calligramy). The canvas is
 //  letterboxed to the output aspect by the caller (`.aspectRatio`), so positions
@@ -42,7 +42,7 @@ struct MetalCanvasView: NSViewRepresentable {
         let device: MTLDevice?
         var metal: TmetalViewModel
         private let queue: MTLCommandQueue?
-        private var renderer: MetalRenderer?
+        private var renderer: QuadRenderer?
         /// Cached source texture + the CGImage it was built from (rebuilt on change).
         private var sourceTexture: MTLTexture?
         private var sourceImageRef: CGImage?
@@ -57,7 +57,7 @@ struct MetalCanvasView: NSViewRepresentable {
 
         func setup(_ view: MTKView) {
             guard let device else { return }
-            renderer = MetalRenderer(device: device, colorPixelFormat: view.colorPixelFormat)
+            renderer = QuadRenderer(device: device, colorPixelFormat: view.colorPixelFormat)
         }
 
         func mtkView(_ view: MTKView, drawableSizeWillChange size: CGSize) { }
@@ -70,13 +70,16 @@ struct MetalCanvasView: NSViewRepresentable {
 
             updateSourceTexture()                            // rebuild only if the source changed
             let viewport = SIMD2(Float(view.drawableSize.width), Float(view.drawableSize.height))
-            renderer.render([metal.currentBatch()],          // splats or textured, pulled each tick
-                            uniforms: metal.renderUniforms(viewport: viewport),
+            let q = metal.currentQuads()                     // material + instances, pulled each tick
+            let batch = QuadBatch(material: q.material,
+                                       instances: q.instances,
+                                       params: q.params,
+                                       texture: q.material == .textured ? sourceTexture : nil)
+            renderer.render([batch],
+                            frame: metal.frameUniforms(viewport: viewport),
                             grade: metal.gradeUniforms(),
                             clearColor: metal.backgroundClearColor(),
                             drawable: drawable.texture,
-                            sourceTexture: sourceTexture,
-                            uvHalf: metal.uvHalf(),
                             commandBuffer: cmd)
             cmd.present(drawable)
             cmd.commit()
