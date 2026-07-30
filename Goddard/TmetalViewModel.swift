@@ -86,11 +86,16 @@ final class TmetalViewModel {
             out.reserveCapacity(s.points.count + model.fExcludedPoints.count)
             for i in 0..<s.points.count {
                 let uv = i < uvs.count ? uvs[i] : s.points[i]
-                out.append(QuadInstance(position: s.points[i], size: size, uvCenter: uv, uvHalf: uvh))
+                let v  = i < s.values.count ? s.values[i] : 1
+                out.append(QuadInstance(position: s.points[i], size: size,
+                                        color: SIMD4(1, 1, 1, v),
+                                        uvCenter: uv, uvHalf: uvh))
             }
         }
         for p in model.fExcludedPoints {
-            out.append(QuadInstance(position: p.position, size: size, uvCenter: p.position, uvHalf: uvh))
+            out.append(QuadInstance(position: p.position, size: size,
+                                    color: SIMD4(1, 1, 1, p.value),
+                                    uvCenter: p.position, uvHalf: uvh))
         }
         return out
     }
