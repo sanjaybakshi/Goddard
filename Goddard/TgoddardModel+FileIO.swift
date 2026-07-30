@@ -53,7 +53,7 @@ extension TgoddardModel {
                               pointLayout: fPointLayout.rawValue,
                               outputWidth: fOutputWidth, outputHeight: fOutputHeight,
                               displayRadius: fDisplayRadius, falloffPower: fFalloffPower,
-                              textured: fTextured,
+                              textured: fTextured, outline: fOutline,
                               backgroundColor: fBackgroundColor, dotColor: fDotColor,
                               outBlackPoint: fOutBlackPoint, outWhitePoint: fOutWhitePoint,
                               outBrightness: fOutBrightness, outContrast: fOutContrast,
@@ -77,6 +77,7 @@ extension TgoddardModel {
         fOutputWidth = p.outputWidth; fOutputHeight = p.outputHeight
         fDisplayRadius = p.displayRadius; fFalloffPower = p.falloffPower
         fTextured = p.textured
+        fOutline = p.outline
         fBackgroundColor = p.backgroundColor; fDotColor = p.dotColor
         fOutBlackPoint = p.outBlackPoint; fOutWhitePoint = p.outWhitePoint
         fOutBrightness = p.outBrightness; fOutContrast = p.outContrast

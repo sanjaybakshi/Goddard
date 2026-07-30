@@ -7,9 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		1A789D6B30116786007A33B6 /* SameEyesMetalKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A789D6A30116786007A33B6 /* SameEyesMetalKit */; };
-		1A789D6D30116786007A33B6 /* SameEyesOptimizerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A789D6C30116786007A33B6 /* SameEyesOptimizerKit */; };
-		1A789D6F30116786007A33B6 /* SameEyesUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A789D6E30116786007A33B6 /* SameEyesUIKit */; };
+		1A2878903017F05D00ECE207 /* SameEyesMetalKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A28788F3017F05D00ECE207 /* SameEyesMetalKit */; };
+		1A2878923017F05D00ECE207 /* SameEyesOptimizerKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A2878913017F05D00ECE207 /* SameEyesOptimizerKit */; };
+		1A2878943017F05D00ECE207 /* SameEyesUIKit in Frameworks */ = {isa = PBXBuildFile; productRef = 1A2878933017F05D00ECE207 /* SameEyesUIKit */; };
+		1A2879703017F1C600ECE207 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = 1A28796F3017F1C600ECE207 /* MLX */; };
+		1A2879723017F1C600ECE207 /* MLXNN in Frameworks */ = {isa = PBXBuildFile; productRef = 1A2879713017F1C600ECE207 /* MLXNN */; };
+		1A2879743017F1C600ECE207 /* MLXOptimizers in Frameworks */ = {isa = PBXBuildFile; productRef = 1A2879733017F1C600ECE207 /* MLXOptimizers */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -58,9 +61,12 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1A789D6B30116786007A33B6 /* SameEyesMetalKit in Frameworks */,
-				1A789D6D30116786007A33B6 /* SameEyesOptimizerKit in Frameworks */,
-				1A789D6F30116786007A33B6 /* SameEyesUIKit in Frameworks */,
+				1A2879743017F1C600ECE207 /* MLXOptimizers in Frameworks */,
+				1A2879703017F1C600ECE207 /* MLX in Frameworks */,
+				1A2878903017F05D00ECE207 /* SameEyesMetalKit in Frameworks */,
+				1A2878923017F05D00ECE207 /* SameEyesOptimizerKit in Frameworks */,
+				1A2879723017F1C600ECE207 /* MLXNN in Frameworks */,
+				1A2878943017F05D00ECE207 /* SameEyesUIKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -129,9 +135,12 @@
 			);
 			name = Goddard;
 			packageProductDependencies = (
-				1A789D6A30116786007A33B6 /* SameEyesMetalKit */,
-				1A789D6C30116786007A33B6 /* SameEyesOptimizerKit */,
-				1A789D6E30116786007A33B6 /* SameEyesUIKit */,
+				1A28788F3017F05D00ECE207 /* SameEyesMetalKit */,
+				1A2878913017F05D00ECE207 /* SameEyesOptimizerKit */,
+				1A2878933017F05D00ECE207 /* SameEyesUIKit */,
+				1A28796F3017F1C600ECE207 /* MLX */,
+				1A2879713017F1C600ECE207 /* MLXNN */,
+				1A2879733017F1C600ECE207 /* MLXOptimizers */,
 			);
 			productName = Goddard;
 			productReference = 1A641B2E301086F500F3E476 /* Goddard.app */;
@@ -216,7 +225,8 @@
 			mainGroup = 1A641B25301086F500F3E476;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				1A789D6930116767007A33B6 /* XCLocalSwiftPackageReference "../SameEyesKit" */,
+				1A1BC4433017F02400DCFC0C /* XCLocalSwiftPackageReference "../SameEyesKit" */,
+				1A28796E3017F1A900ECE207 /* XCRemoteSwiftPackageReference "mlx-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 1A641B2F301086F500F3E476 /* Products */;
@@ -618,27 +628,53 @@
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
-		1A789D6930116767007A33B6 /* XCLocalSwiftPackageReference "../SameEyesKit" */ = {
+		1A1BC4433017F02400DCFC0C /* XCLocalSwiftPackageReference "../SameEyesKit" */ = {
 			isa = XCLocalSwiftPackageReference;
 			relativePath = ../SameEyesKit;
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		1A28796E3017F1A900ECE207 /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.31.6;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
-		1A789D6A30116786007A33B6 /* SameEyesMetalKit */ = {
+		1A28788F3017F05D00ECE207 /* SameEyesMetalKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1A789D6930116767007A33B6 /* XCLocalSwiftPackageReference "../SameEyesKit" */;
+			package = 1A1BC4433017F02400DCFC0C /* XCLocalSwiftPackageReference "../SameEyesKit" */;
 			productName = SameEyesMetalKit;
 		};
-		1A789D6C30116786007A33B6 /* SameEyesOptimizerKit */ = {
+		1A2878913017F05D00ECE207 /* SameEyesOptimizerKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1A789D6930116767007A33B6 /* XCLocalSwiftPackageReference "../SameEyesKit" */;
+			package = 1A1BC4433017F02400DCFC0C /* XCLocalSwiftPackageReference "../SameEyesKit" */;
 			productName = SameEyesOptimizerKit;
 		};
-		1A789D6E30116786007A33B6 /* SameEyesUIKit */ = {
+		1A2878933017F05D00ECE207 /* SameEyesUIKit */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1A789D6930116767007A33B6 /* XCLocalSwiftPackageReference "../SameEyesKit" */;
+			package = 1A1BC4433017F02400DCFC0C /* XCLocalSwiftPackageReference "../SameEyesKit" */;
 			productName = SameEyesUIKit;
+		};
+		1A28796F3017F1C600ECE207 /* MLX */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A28796E3017F1A900ECE207 /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLX;
+		};
+		1A2879713017F1C600ECE207 /* MLXNN */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A28796E3017F1A900ECE207 /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLXNN;
+		};
+		1A2879733017F1C600ECE207 /* MLXOptimizers */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1A28796E3017F1A900ECE207 /* XCRemoteSwiftPackageReference "mlx-swift" */;
+			productName = MLXOptimizers;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

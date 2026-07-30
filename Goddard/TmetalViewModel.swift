@@ -95,6 +95,30 @@ final class TmetalViewModel {
         return out
     }
 
+    /// Per-point box outlines (nil when the Outline toggle is off), drawn as a separate
+    /// `.outline` batch on top of the main batch. One box per rendered point (optimized +
+    /// excluded), sized like the dot, colored in the dot color. `params.x` = border thickness.
+    func outlineQuads() -> (instances: [QuadInstance], params: SIMD4<Float>)? {
+        guard model.fOutline else { return nil }
+        let size = SIMD2<Float>(model.fDisplayRadius, model.fDisplayRadius)
+        let dc = model.fDotColor
+        let color = SIMD4<Float>(dc.x, dc.y, dc.z, 1)
+        var out = [QuadInstance]()
+        if let s = model.renderData() {
+            out.reserveCapacity(s.points.count + model.fExcludedPoints.count)
+            for i in 0..<s.points.count {
+                out.append(QuadInstance(position: s.points[i], size: size, color: color))
+            }
+        }
+        for p in model.fExcludedPoints {
+            out.append(QuadInstance(position: p.position, size: size, color: color))
+        }
+        return (out, SIMD4(Self.outlineThickness, 0, 0, 0))
+    }
+
+    /// Border thickness for `.outline` batches (fraction of the half-quad; see `mat_outline`).
+    private static let outlineThickness: Float = 0.18
+
     /// Source-UV patch half-extent — matches the on-screen dot footprint, aspect-corrected
     /// (fDisplayRadius is a fraction of the short side).
     private func uvHalf() -> SIMD2<Float> {

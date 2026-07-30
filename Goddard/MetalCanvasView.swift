@@ -71,11 +71,14 @@ struct MetalCanvasView: NSViewRepresentable {
             updateSourceTexture()                            // rebuild only if the source changed
             let viewport = SIMD2(Float(view.drawableSize.width), Float(view.drawableSize.height))
             let q = metal.currentQuads()                     // material + instances, pulled each tick
-            let batch = QuadBatch(material: q.material,
-                                       instances: q.instances,
-                                       params: q.params,
-                                       texture: q.material == .textured ? sourceTexture : nil)
-            renderer.render([batch],
+            var batches = [QuadBatch(material: q.material,
+                                     instances: q.instances,
+                                     params: q.params,
+                                     texture: q.material == .textured ? sourceTexture : nil)]
+            if let o = metal.outlineQuads() {                // outline overlay on top, when enabled
+                batches.append(QuadBatch(material: .outline, instances: o.instances, params: o.params))
+            }
+            renderer.render(batches,
                             frame: metal.frameUniforms(viewport: viewport),
                             grade: metal.gradeUniforms(),
                             clearColor: metal.backgroundClearColor(),

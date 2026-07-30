@@ -76,6 +76,11 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     /// dot color + flatness are inert; background color + output grade still apply.
     @Published var fTextured: Bool = false
 
+    /// Draw a box outline around every rendered point (optimized + excluded), on top of
+    /// the main splats/textures. Off by default; display-only; persisted. Outline color
+    /// follows the dot color.
+    @Published var fOutline: Bool = false
+
     // Output grade — a tonal curve on the final composited frame (a renderer
     // post-process). Live; never touches the optimizer. Identity = no change.
     @Published var fOutBlackPoint: Float = 0

@@ -229,6 +229,14 @@ struct ParameterPanelView: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
+                        Toggle("Outline", isOn: Binding(
+                            get: { fModel.fOutline },
+                            set: { fModel.setValue(\.fOutline, to: $0,
+                                                   named: "Toggle outline", using: undoManager) }))
+                        Text("Draws a box outline around each point, in the dot color.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
                         Divider()
 
                         IntSliderRow(title: "Output W", store: fModel, undoKeyPath: \.fOutputWidth,
