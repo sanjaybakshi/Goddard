@@ -94,11 +94,7 @@ struct MetalCanvasView: NSViewRepresentable {
             if src === sourceImageRef { return }
             sourceImageRef = src
             guard let src, let device else { sourceTexture = nil; return }
-            let loader = MTKTextureLoader(device: device)
-            sourceTexture = try? loader.newTexture(cgImage: src, options: [
-                .origin: MTKTextureLoader.Origin.topLeft,
-                .SRGB: false
-            ])
+            sourceTexture = QuadRenderer.makeTexture(from: src, device: device)
         }
     }
 }

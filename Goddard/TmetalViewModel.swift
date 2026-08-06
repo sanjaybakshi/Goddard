@@ -121,8 +121,8 @@ final class TmetalViewModel {
         return (out, SIMD4(Self.outlineThickness, 0, 0, 0))
     }
 
-    /// Border thickness for `.outline` batches (fraction of the half-quad; see `mat_outline`).
-    private static let outlineThickness: Float = 0.18
+    /// Border thickness for `.outline` batches, in pixels (see `mat_outline`).
+    private static let outlineThickness: Float = 2.0
 
     /// Source-UV patch half-extent — matches the on-screen dot footprint, aspect-corrected
     /// (fDisplayRadius is a fraction of the short side).

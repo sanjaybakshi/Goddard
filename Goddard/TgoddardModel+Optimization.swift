@@ -29,16 +29,15 @@ extension TgoddardModel {
 
         // Aspect-matched grid from the long-side dimension + output aspect
         // (SameEyesOptimizerKit). Non-square; renderPoints handles it directly.
-        let frame = OptimizationFrame(outputWidth: fOutputWidth,
-                                      outputHeight: fOutputHeight,
-                                      longSide: max(8, fOptimizerLongSide))
-        let W = frame.width, H = frame.height
+        let (W, H) = optimizationGridSize(outputWidth: fOutputWidth,
+                                          outputHeight: fOutputHeight,
+                                          preferredGridLongSide: max(8, fOptimizerLongSide))
 
         // Target: the loaded goal image (aspect-fit + grayscale into the frame),
         // else a stand-in bright centered disk on black.
         let targetMLX: MLXArray
         if let goal = fGoalImage,
-           let t = goalTarget(from: goal, width: W, height: H, adjustments: currentGoalAdjustments(),
+           let t = goalTarget(from: goal, width: W, height: H, grade: currentGoalGrade(),
                               center: CGPoint(x: Double(fGoalCenterX), y: Double(fGoalCenterY)),
                               scale: CGFloat(fGoalScale)) {
             targetMLX = t
@@ -60,9 +59,9 @@ extension TgoddardModel {
         var goalRect: CGRect? = nil
         if let goal = fGoalImage {
             let ga = CGFloat(goal.width) / CGFloat(max(1, goal.height))
-            let pr = placedRect(contentAspect: ga, frameSize: CGSize(width: W, height: H),
-                                center: CGPoint(x: Double(fGoalCenterX), y: Double(fGoalCenterY)),
-                                scale: CGFloat(fGoalScale))
+            let pr = aspectFitRect(contentAspect: ga, frameSize: CGSize(width: W, height: H),
+                                   center: CGPoint(x: Double(fGoalCenterX), y: Double(fGoalCenterY)),
+                                   scale: CGFloat(fGoalScale))
             goalRect = CGRect(x: pr.minX / CGFloat(W), y: pr.minY / CGFloat(H),
                               width: pr.width / CGFloat(W), height: pr.height / CGFloat(H))
         }
@@ -70,34 +69,33 @@ extension TgoddardModel {
         // Seed points per the chosen layout, then split by the goal region: points
         // inside go to the optimizer ("goal points"); the rest are frozen, display-only
         // (fExcludedPoints). The optimizer only sees the subset — the major perf win.
-        let seed = frame.seedPoints(count: n, layout: fPointLayout)
-        var goalPts = [Float](); goalPts.reserveCapacity(seed.count)
+        let seed: [SIMD2<Float>]
+        switch fPointLayout {
+        case .grid:   seed = initialPositions_grid(n: n, width: W, height: H)
+        case .random: seed = initialPositions_random(n: n)
+        }
+        var goalPts = [SIMD2<Float>](); goalPts.reserveCapacity(seed.count)
         var excluded = [ExcludedPoint]()
-        var optimizedUVs = [SIMD2<Float>]()
-        var si = 0
-        while si < seed.count {
-            let x = seed[si], y = seed[si + 1]; si += 2
-            if let r = goalRect, !r.contains(CGPoint(x: Double(x), y: Double(y))) {
-                excluded.append(ExcludedPoint(position: SIMD2(x, y), value: 0.8))
+        for p in seed {
+            if let r = goalRect, !r.contains(CGPoint(x: Double(p.x), y: Double(p.y))) {
+                excluded.append(ExcludedPoint(position: p, value: 0.8))
             } else {
-                goalPts.append(x); goalPts.append(y)
-                optimizedUVs.append(SIMD2(x, y))   // frozen source UV = init position
+                goalPts.append(p)   // frozen source UV = init position (see fOptimizedUVs)
             }
         }
         // Degenerate config (nothing landed in the region) → don't split; optimize all.
         if goalPts.isEmpty {
             goalPts = seed
             excluded = []
-            optimizedUVs = stride(from: 0, to: seed.count, by: 2).map { SIMD2(seed[$0], seed[$0 + 1]) }
         }
         fExcludedPoints = excluded
-        fOptimizedUVs = optimizedUVs
+        fOptimizedUVs = goalPts   // frozen initial positions, index-aligned to the optimizer points
 
-        let goalCount = goalPts.count / 2
-        let ptsMLX = MLXArray(goalPts).reshaped([goalCount, 2])
+        let goalCount = goalPts.count
+        let ptsMLX = MLXArray(goalPts.flatMap { [$0.x, $0.y] }).reshaped([goalCount, 2])
 
         // Per-axis sizes so dots render round on the non-square grid.
-        let (sw, sh) = frame.normalizedSize(radiusFraction: Double(fOptimizerDotRadius))
+        let (sw, sh) = optimizationGridDotSize(gridWidth: W, gridHeight: H, radiusFraction: Double(fOptimizerDotRadius))
         var sizesArr = [Float](); sizesArr.reserveCapacity(goalCount * 2)
         for _ in 0..<goalCount { sizesArr.append(sw); sizesArr.append(sh) }
         let sizesMLX = MLXArray(sizesArr).reshaped([goalCount, 2])

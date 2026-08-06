@@ -63,8 +63,8 @@ struct GoalPlacementOverlay: View {
         GeometryReader { geo in
             if let goal = model.fGoalImage {
                 let aspect = CGFloat(goal.width) / CGFloat(max(1, goal.height))
-                let rect = placedRect(contentAspect: aspect,
-                                      frameSize: geo.size,
+                let rect = aspectFitRect(contentAspect: aspect,
+                                         frameSize: geo.size,
                                       center: CGPoint(x: Double(model.fGoalCenterX),
                                                       y: Double(model.fGoalCenterY)),
                                       scale: CGFloat(model.fGoalScale))
@@ -129,9 +129,9 @@ struct GoalPlacementOverlay: View {
                 // Capture the session once, from the model — not a possibly-stale rect.
                 if resize == nil {
                     let s0 = model.fGoalScale, cx0 = model.fGoalCenterX, cy0 = model.fGoalCenterY
-                    let startRect = placedRect(contentAspect: aspect, frameSize: size,
-                                               center: CGPoint(x: Double(cx0), y: Double(cy0)),
-                                               scale: CGFloat(s0))
+                    let startRect = aspectFitRect(contentAspect: aspect, frameSize: size,
+                                                  center: CGPoint(x: Double(cx0), y: Double(cy0)),
+                                                  scale: CGFloat(s0))
                     let o = corner.opposite(in: startRect)
                     let c0 = corner.point(in: startRect)
                     let denom = max(0.0001, s0)

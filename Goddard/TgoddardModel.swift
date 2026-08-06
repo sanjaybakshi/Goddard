@@ -40,7 +40,7 @@ final class TgoddardModel: ObservableObject, UndoableStore {
     @Published var fOverlapWeight: Float = 0.0
 
     // Optimizer setup — applied on rebuild (Reset). fOptimizerLongSide is the
-    // long side of the aspect-matched grid; OptimizationFrame derives the other
+    // long side of the aspect-matched grid; optimizationGridSize derives the other
     // axis from the output aspect.
     @Published var fOptimizerLongSide:   Int = 512
     /// Changing the point count restarts the optimizer (no continuity expected):
@@ -182,20 +182,20 @@ final class TgoddardModel: ObservableObject, UndoableStore {
         fSourceThumbnail = fSourceImage.flatMap { scaledToFit($0, maxDimension: 256) }
     }
 
-    /// The current goal adjustments assembled from the model params.
-    func currentGoalAdjustments() -> GoalAdjustments {
-        GoalAdjustments(invert: fGoalInvert, blur: fGoalBlur,
-                        blackPoint: fGoalBlackPoint, whitePoint: fGoalWhitePoint,
-                        brightness: fGoalBrightness, contrast: fGoalContrast, gamma: fGoalGamma)
+    /// The current goal grade assembled from the model params.
+    func currentGoalGrade() -> GoalGrade {
+        GoalGrade(invert: fGoalInvert, blur: fGoalBlur,
+                  blackPoint: fGoalBlackPoint, whitePoint: fGoalWhitePoint,
+                  brightness: fGoalBrightness, contrast: fGoalContrast, gamma: fGoalGamma)
     }
 
     /// Recompute the small processed-target preview (grayscale) from the current
     /// goal image + adjustments. Live — driven by the goal-param didSets.
     func refreshGoalThumbnail() {
         guard let goal = fGoalImage else { fGoalThumbnail = nil; return }
-        let frame = OptimizationFrame(outputWidth: fOutputWidth, outputHeight: fOutputHeight, longSide: 256)
-        if let t = goalTarget(from: goal, width: frame.width, height: frame.height,
-                              adjustments: currentGoalAdjustments(),
+        let (W, H) = optimizationGridSize(outputWidth: fOutputWidth, outputHeight: fOutputHeight, preferredGridLongSide: 256)
+        if let t = goalTarget(from: goal, width: W, height: H,
+                              grade: currentGoalGrade(),
                               center: CGPoint(x: Double(fGoalCenterX), y: Double(fGoalCenterY)),
                               scale: CGFloat(fGoalScale)) {
             fGoalThumbnail = cgImage(fromMLX: t)
